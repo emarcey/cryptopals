@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 ### Challenge 1
 HEX_CHARS = "0123456789abcdef"
@@ -9,28 +9,28 @@ def hex_to_base64(hex_str: str) -> str:
     curr = 0
     result = ""
 
-    needs = ""
+    needs = 0
     for hex_char in hex_str:
         dec = int(hex_char, 16)
 
         if not needs:
             curr = dec
-            needs = "2"
+            needs = 2
             continue
-        if needs == "2":
+        if needs == 2:
             result += B64_CHARS[(curr << 2) | (dec >> 2)]
             curr = dec & 0x3
-            needs = "4"
+            needs = 4
             continue
-        if needs == "4":
+        if needs == 4:
             result += B64_CHARS[(curr << 4) | dec]
             curr = 0
-            needs = ""
+            needs = 0
             continue
 
-    if needs == "2":
+    if needs == 2:
         result += B64_CHARS[curr << 2] + "="
-    elif needs == "4":
+    elif needs == 4:
         result += B64_CHARS[curr << 4] + "=="
 
     return result
@@ -98,27 +98,29 @@ def xor_scorer(s: str) -> float:
         char_byte = ord(c)
         # no one is putting control chars in their message
         if _is_control_char(char_byte):
-            score -= 2
-        elif char_byte < 31 or char_byte > 127:
+            score -= 5
+        elif _is_punctuation_byte(char_byte):
+            score -= 3
+        elif char_byte > 127:
             score -= 1
         elif (char_byte >= 65 and char_byte <= 90) or (char_byte >= 97 and char_byte <= 122) or char_byte == 32:
             score += 1
 
-        # punctuation very rarely occurs back to back
-        if _is_punctuation_byte(char_byte) and _is_punctuation_byte(prev_char_byte):
-            # some cases like "((" are okay but still unusual
-            if char_byte != prev_char_byte:
-                score -= 5
-            else:
-                score -= 2
+        # # punctuation very rarely occurs back to back
+        # if _is_punctuation_byte(char_byte) and _is_punctuation_byte(prev_char_byte):
+        #     # some cases like "((" are okay but still unusual
+        #     if char_byte != prev_char_byte:
+        #         score -= 5
+        #     else:
+        #         score -= 2
 
         prev_char_byte = char_byte
 
     return score
 
 
-def find_xor_char(s: str) -> Tuple[str, float, str]:
-    ascii_bytes = hex_to_text(s).encode("utf-8")
+def find_xor_char_from_text(s: str) -> Tuple[str, float, str]:
+    ascii_bytes = s.encode("utf-8")
     scores = []
     for i in range(256):
         result_string = xor_char(ascii_bytes, i)
@@ -127,6 +129,10 @@ def find_xor_char(s: str) -> Tuple[str, float, str]:
 
     sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
     return sorted_scores[0]
+
+
+def find_xor_char(s: str) -> Tuple[str, float, str]:
+    return find_xor_char_from_text(hex_to_text(s))
 
 
 ### Challenge 4
@@ -151,7 +157,7 @@ def text_to_hex(s: str) -> str:
     return result
 
 
-def encrypt_repeating_key_xor(text: str, key: str) -> str:
+def process_repeating_xor(text: str, key: str) -> str:
     i = 0
     key_len = len(key)
     result = ""
@@ -162,21 +168,138 @@ def encrypt_repeating_key_xor(text: str, key: str) -> str:
 
 
 def text_to_hex_repeating_key(text: str, key: str) -> str:
-    encrypted_text = encrypt_repeating_key_xor(text, key)
+    encrypted_text = process_repeating_xor(text, key)
     return text_to_hex(encrypted_text)
 
 
 ### Challenge 6
+def base64_to_plaintext(b64_str: str) -> str:
+    curr = 0
+    result = ""
+
+    needs = 0
+    stripped_b64_str = b64_str.strip("=")
+
+    for b64_char in stripped_b64_str:
+        dec = B64_CHARS.index(b64_char)
+        if not needs:
+            curr = dec
+            needs = 2
+            continue
+        if needs == 2:
+            result += chr((curr << 2) | (dec >> 4))
+            curr = dec & 15
+            needs = 4
+            continue
+        if needs == 4:
+            result += chr((curr << 4) | (dec >> 2))
+            curr = dec & 0x3
+            needs = 6
+            continue
+        if needs == 6:
+            result += chr((curr << 6) | dec)
+            curr = 0
+            needs = 0
+            continue
+    return result
 
 
-def _byte_distance(i: int) -> int:
+def _bit_distance(i: int) -> int:
     if i == 0:
         return 0
-    return i % 2 + _byte_distance(i >> 1)
+    return i % 2 + _bit_distance(i >> 1)
 
 
-def calculate_hamming_distance(s1: str, s2: str):
+def calculate_bit_hamming_distance(s1: str, s2: str) -> float:
     result = 0
     for i in range(len(s1)):
-        result += _byte_distance(ord(s1[i]) ^ ord(s2[i]))
+        result += _bit_distance(ord(s1[i]) ^ ord(s2[i]))
     return result
+
+
+def str_to_chunks(s: str, chunk_size: int, max_chunks: int, allow_partials: bool) -> List[str]:
+    chunks = []
+    num_chunks = 0
+    for i in range(0, len(s), chunk_size):
+        if max_chunks != -1 and num_chunks >= max_chunks:
+            break
+
+        chunk = s[i : i + chunk_size]
+        if not allow_partials and len(chunk) < chunk_size:
+            break
+        chunks.append(chunk)
+        num_chunks += 1
+    return chunks
+
+
+def find_key_len_candidates(
+    s: str, min_key_len: int = 2, max_key_len: int = 40, num_chunks: int = 6
+) -> List[Tuple[int, float]]:
+    scores = []
+    for i in range(min_key_len, min(max_key_len, len(s) // 4) + 1):
+        tmp_distances = []
+        chunks = str_to_chunks(s, i, num_chunks, False)
+        chunk_ct = len(chunks)
+        for j in range(chunk_ct):
+            for k in range(j + 1, chunk_ct):
+                tmp_distances.append(calculate_bit_hamming_distance(chunks[j], chunks[k]))
+
+        scores.append((i, (sum(tmp_distances) / len(tmp_distances)) / i))
+    sorted_scores = sorted(scores, key=lambda x: x[1])
+    return sorted_scores[:5]
+
+
+def transpose_chunks(chunks: List[str]) -> List[str]:
+    if not chunks:
+        return []
+    key_size = len(chunks[0])
+    transposed_chunks = ["" for i in range(key_size)]
+    for chunk in chunks:
+        for i in range(min(key_size, len(chunk))):
+            transposed_chunks[i] += chunk[i]
+
+    return transposed_chunks
+
+
+def find_repeating_xor_key(s: str) -> str:
+    key_len_candidates = find_key_len_candidates(s)
+    print(key_len_candidates)
+    all_scores = []
+    for key_len_candidate in key_len_candidates:
+        key_len_scores = []
+        key_len = key_len_candidate[0]
+        s_chunks = str_to_chunks(s, key_len, -1, True)
+        s_transposed = transpose_chunks(s_chunks)
+        all_scores.append([find_xor_char_from_text(transposed_chunk) for transposed_chunk in s_transposed])
+
+    print(all_scores)
+    avg_scores = []
+    for scores in all_scores:
+        key = ""
+        sum_scores = 0
+        len_scores = 0
+        for score in scores:
+            key += score[2]
+            sum_scores += score[1]
+            len_scores += 1
+
+        avg_scores.append((key, sum_scores / len_scores))
+
+    return sorted(avg_scores, key=lambda x: x[1], reverse=True)
+
+
+def decrypt_repeating_xor(s: str) -> Tuple[str, str]:
+    key_candidates = find_repeating_xor_key(s)
+    if not key_candidates:
+        raise ValueError("No keys :(")
+
+    key = key_candidates[0][0]
+    return process_repeating_xor(s, key), key
+
+
+def decrypt_hex_repeating_xor(hex_s: str) -> Tuple[str, str]:
+    return decrypt_repeating_xor(hex_to_text(hex_s))
+
+
+def decrypt_b64_repeating_xor(b64_s: str) -> Tuple[str, str]:
+    return decrypt_repeating_xor("".join([base64_to_plaintext(y) for y in b64_s.split("\n")]))
