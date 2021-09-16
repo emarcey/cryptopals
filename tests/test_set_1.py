@@ -4,7 +4,9 @@ import pytest
 from exercises.set_1 import (
     calculate_bit_hamming_distance,
     decrypt_b64_repeating_xor,
+    decode_base64_to_aes128_ecb,
     decrypt_hex_repeating_xor,
+    find_ecb_encoded_hex_text,
     find_record_with_xor_char,
     find_xor_char,
     hex_to_base64,
@@ -111,3 +113,16 @@ def test_decrypt_b64_repeating_xor() -> None:
             expected_text,
             expected_key,
         )
+
+
+def test_decode_base64_to_aes128_ecb() -> None:
+    with open(f"{os.getcwd()}/data/set1_challenge7.txt", "r") as f:
+        text = f.read()
+        assert decode_base64_to_aes128_ecb(text, "YELLOW SUBMARINE") == expected_text
+
+
+def test_find_ecb_encoded_hex_text() -> None:
+    with open(f"{os.getcwd()}/data/set1_challenge8.txt", "r") as f:
+        text = [line.strip() for line in f]
+        result = find_ecb_encoded_hex_text(text)
+        assert result[0] == 132

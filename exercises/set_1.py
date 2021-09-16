@@ -1,4 +1,5 @@
 from typing import List, Tuple
+from Crypto.Cipher import AES
 
 ### Challenge 1
 HEX_CHARS = "0123456789abcdef"
@@ -204,6 +205,10 @@ def base64_to_plaintext(b64_str: str) -> str:
     return result
 
 
+def multiline_base64_to_plaintext(b64_s: str) -> str:
+    return "".join([base64_to_plaintext(y) for y in b64_s.split("\n")])
+
+
 def _bit_distance(i: int) -> int:
     if i == 0:
         return 0
@@ -302,4 +307,36 @@ def decrypt_hex_repeating_xor(hex_s: str) -> Tuple[str, str]:
 
 
 def decrypt_b64_repeating_xor(b64_s: str) -> Tuple[str, str]:
-    return decrypt_repeating_xor("".join([base64_to_plaintext(y) for y in b64_s.split("\n")]))
+    return decrypt_repeating_xor(multiline_base64_to_plaintext(b64_s))
+
+
+### Challenge 7
+def decode_base64_to_aes128_ecb(b64_s: str, key: str) -> str:
+    cipher = AES.new(key, AES.MODE_ECB)
+    decoded = multiline_base64_to_plaintext(b64_s)
+    return cipher.decrypt(decoded.encode("ISO-8859-1")).decode().strip("\x04")
+
+
+### Challenge 8
+def text_to_hex(s: str) -> str:
+    result = ""
+    for c in s:
+        ord_c = ord(c)
+        result += HEX_CHARS[ord_c >> 4]
+        result += HEX_CHARS[ord_c & 15]  # 15 = 0b00001111
+
+    return result
+
+
+def find_ecb_encoded_hex_text(lines: List[str]) -> Tuple[int, str]:
+    results = tuple()
+    i = 0
+    max_score = -1
+    for line in lines:
+        chunks = str_to_chunks(line.strip(), 32, -1, True)
+        score = len(chunks) - len(set(chunks))
+        if score > max_score:
+            results = (i, line)
+            max_score = score
+        i += 1
+    return results
