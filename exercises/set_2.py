@@ -6,7 +6,7 @@ from exercises.set_1 import encrypt_aes128_ecb, decrypt_aes128_ecb, process_repe
 from exercises.utils import str_to_chunks, pkcs7_unpad, pkcs7_pad, gen_aes_key, salt_bytes
 
 
-### Challenge 9
+### Challenge 10
 def encrypt_aes_128_cbc(s: str, key: str, iv: str) -> str:
     results = []
     for chunk in str_to_chunks(s, BLOCK_SIZE, -1, True):
@@ -30,7 +30,7 @@ def decrypt_aes_128_cbc(s: str, key: str, iv: str) -> str:
     return pkcs7_unpad("".join(results))
 
 
-### Challenge 10
+### Challenge 11
 def encrypt_ecb_or_cbc(s: str) -> Tuple[str, str]:
     s_bytes = s.encode(DEFAULT_ENCODING)
     key = gen_aes_key()
