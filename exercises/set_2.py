@@ -38,12 +38,9 @@ def encrypt_ecb_or_cbc(s: str) -> Tuple[str, str]:
     result = ""
     enc_type = ""
     if randbelow(2) == 1:
-        result = encrypt_aes128_ecb(salted_s, key)
+        return encrypt_aes128_ecb(salted_s, key), "ecb"
         enc_type = "ecb"
-    else:
-        result = encrypt_aes_128_cbc(salted_s, key, gen_aes_key().decode(DEFAULT_ENCODING))
-        enc_type = "cbc"
-    return result, enc_type
+    return encrypt_aes_128_cbc(salted_s, key, gen_aes_key().decode(DEFAULT_ENCODING)), "cbc"
 
 
 def detect_ecb_or_cbc(s: str) -> str:
