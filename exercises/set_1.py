@@ -1,6 +1,9 @@
 from typing import List, Tuple
 from Crypto.Cipher import AES
 
+from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
+from exercises.utils import pkcs7_pad, pkcs7_unpad, str_to_chunks
+
 ### Challenge 1
 HEX_CHARS = "0123456789abcdef"
 B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -222,21 +225,6 @@ def calculate_bit_hamming_distance(s1: str, s2: str) -> float:
     return result
 
 
-def str_to_chunks(s: str, chunk_size: int, max_chunks: int, allow_partials: bool) -> List[str]:
-    chunks = []
-    num_chunks = 0
-    for i in range(0, len(s), chunk_size):
-        if max_chunks != -1 and num_chunks >= max_chunks:
-            break
-
-        chunk = s[i : i + chunk_size]
-        if not allow_partials and len(chunk) < chunk_size:
-            break
-        chunks.append(chunk)
-        num_chunks += 1
-    return chunks
-
-
 def find_key_len_candidates(
     s: str, min_key_len: int = 2, max_key_len: int = 40, num_chunks: int = 6
 ) -> List[Tuple[int, float]]:
@@ -277,7 +265,6 @@ def find_repeating_xor_key(s: str) -> str:
         s_transposed = transpose_chunks(s_chunks)
         all_scores.append([find_xor_char_from_text(transposed_chunk) for transposed_chunk in s_transposed])
 
-    print(all_scores)
     avg_scores = []
     for scores in all_scores:
         key = ""
@@ -311,10 +298,21 @@ def decrypt_b64_repeating_xor(b64_s: str) -> Tuple[str, str]:
 
 
 ### Challenge 7
-def decode_base64_to_aes128_ecb(b64_s: str, key: str) -> str:
+def decrypt_aes128_ecb(s: str, key: str) -> str:
     cipher = AES.new(key, AES.MODE_ECB)
+    return pkcs7_unpad(cipher.decrypt(s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING))
+
+
+def encrypt_aes128_ecb(s: str, key: str) -> str:
+    cipher = AES.new(key, AES.MODE_ECB)
+    len_s = len(s)
+    padded_s = pkcs7_pad(s, len_s + (BLOCK_SIZE - (len_s % BLOCK_SIZE)))
+    return cipher.encrypt(padded_s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
+
+
+def decode_base64_to_aes128_ecb(b64_s: str, key: str) -> str:
     decoded = multiline_base64_to_plaintext(b64_s)
-    return cipher.decrypt(decoded.encode("ISO-8859-1")).decode().strip("\x04")
+    return decrypt_aes128_ecb(decoded, key)
 
 
 ### Challenge 8
@@ -333,7 +331,8 @@ def find_ecb_encoded_hex_text(lines: List[str]) -> Tuple[int, str]:
     i = 0
     max_score = -1
     for line in lines:
-        chunks = str_to_chunks(line.strip(), 32, -1, True)
+        # double block size bc it's hex
+        chunks = str_to_chunks(line.strip(), BLOCK_SIZE * 2, -1, True)
         score = len(chunks) - len(set(chunks))
         if score > max_score:
             results = (i, line)
