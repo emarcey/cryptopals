@@ -306,8 +306,9 @@ def decrypt_aes128_ecb(s: str, key: str) -> str:
 def encrypt_aes128_ecb(s: str, key: str) -> str:
     cipher = AES.new(key, AES.MODE_ECB)
     len_s = len(s)
-    padded_s = pkcs7_pad(s, len_s + (BLOCK_SIZE - (len_s % BLOCK_SIZE)))
-    return cipher.encrypt(padded_s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
+    if len(s) % BLOCK_SIZE != 0:
+        s = pkcs7_pad(s, len(s) + (BLOCK_SIZE - (len(s) % BLOCK_SIZE)))
+    return cipher.encrypt(s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
 
 
 def decode_base64_to_aes128_ecb(b64_s: str, key: str) -> str:

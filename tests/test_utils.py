@@ -2,15 +2,9 @@ import pytest
 from exercises.utils import pkcs7_pad, pkcs7_unpad
 
 
-def test_pkcs7_pad_error() -> None:
-    with pytest.raises(ValueError):
-        pkcs7_pad("ABC", 1)
-
-
 @pytest.mark.parametrize(
     "given, given_block_size, expected",
     [
-        ("", 0, ""),
         ("", 16, "\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"),
         ("a", 16, "a\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F"),
         ("ab", 16, "ab\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E"),

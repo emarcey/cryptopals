@@ -20,9 +20,7 @@ def str_to_chunks(s: str, chunk_size: int, max_chunks: int, allow_partials: bool
 # Challenge 9
 def pkcs7_pad(s: str, block_size: int) -> str:
     len_s = len(s)
-    if len_s > block_size:
-        raise ValueError(f"Block, {s}, longer than block size, {block_size}")
-    if len_s == block_size:
+    if len_s > 0 and len_s % block_size == 0:
         return s
     num_pads = block_size - (len_s % block_size)
     return (s.encode() + (bytes([num_pads]) * num_pads)).decode()
