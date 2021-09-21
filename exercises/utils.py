@@ -36,16 +36,12 @@ def pkcs7_unpad(s: str) -> str:
     return (byte_s[: -byte_s[-1]]).decode()
 
 
-def pkcs7_unpad_aggressive(s: str) -> str:
+def is_pkcs7_padded(s: str) -> bool:
     if len(s) == 0:
         return s
     byte_s = s.encode()
     pad_range = byte_s[-byte_s[-1] :]
-    if len(set(pad_range)) == 1:
-        return (byte_s[: -byte_s[-1]]).decode()
-    if len(pad_range) == len(byte_s):
-        return s
-    raise ValueError(f"Invalid Padding")
+    return all(pad_range[b] == len(pad_range) for b in range(0, len(pad_range)))
 
 
 def gen_aes_key(key_len: int = 16) -> bytes:

@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
 from exercises.set_1 import encrypt_aes128_ecb, decrypt_aes128_ecb, process_repeating_xor, multiline_base64_to_plaintext
-from exercises.utils import str_to_chunks, pkcs7_unpad, pkcs7_unpad_aggressive, pkcs7_pad, gen_aes_key, salt_bytes
+from exercises.utils import str_to_chunks, pkcs7_unpad, pkcs7_pad, gen_aes_key, salt_bytes
 
 
 ### Challenge 10
@@ -28,18 +28,6 @@ def decrypt_aes128_cbc(s: str, key: str, iv: str) -> str:
         results.append(xor_chunk)
         iv = chunk
     return pkcs7_unpad("".join(results))
-
-
-def decrypt_aes128_cbc_aggressive(s: str, key: str, iv: str) -> str:
-    results = []
-    for chunk in str_to_chunks(s, BLOCK_SIZE, -1, True):
-        decrypted_chunk = decrypt_aes128_ecb(chunk, key)
-        if not decrypted_chunk:
-            continue
-        xor_chunk = process_repeating_xor(decrypted_chunk, iv)
-        results.append(xor_chunk)
-        iv = chunk
-    return pkcs7_unpad_aggressive("".join(results))
 
 
 ### Challenge 11
