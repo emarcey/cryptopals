@@ -256,7 +256,6 @@ def transpose_chunks(chunks: List[str]) -> List[str]:
 
 def find_repeating_xor_key(s: str) -> str:
     key_len_candidates = find_key_len_candidates(s)
-    print(key_len_candidates)
     all_scores = []
     for key_len_candidate in key_len_candidates:
         key_len_scores = []

@@ -1,5 +1,6 @@
 from random import choice
-from typing import Tuple
+from typing import Any, Tuple
+from struct import pack
 
 from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
 from exercises.set_1 import process_repeating_xor, decrypt_aes128_ecb, encrypt_aes128_ecb
@@ -108,3 +109,18 @@ def attack_padding_oracle(ciphertext: str, iv: str, oracle: CBCPaddingOracle) ->
     for i in range(1, len(all_blocks)):
         curr_str += attack_block(all_blocks[i], all_blocks[i - 1], oracle)
     return pkcs7_unpad(curr_str)
+
+
+### Challenge 18
+def ctr_stream(s: str, key: str, nonce: int, block_size: int = 16) -> str:
+    counter = 0
+    curr_str = ""
+
+    curr_enc = encrypt_aes128_ecb(pack("<QQ", nonce, counter // block_size).decode(DEFAULT_ENCODING), key)
+    for c in s:
+        curr_str += chr(ord(curr_enc[counter % block_size]) ^ ord(c))
+        counter += 1
+        if counter % 16 == 0:
+            curr_enc = encrypt_aes128_ecb(pack("<QQ", nonce, counter // block_size).decode(DEFAULT_ENCODING), key)
+
+    return curr_str
