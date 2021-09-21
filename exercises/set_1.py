@@ -95,20 +95,62 @@ def _is_control_char(b: int) -> bool:
     return b <= 31 or b == 127
 
 
+freq_table = {
+    "E": 12.02,
+    "T": 9.10,
+    "A": 8.12,
+    "O": 7.68,
+    "I": 7.31,
+    "N": 6.95,
+    "S": 6.28,
+    "R": 6.02,
+    "H": 5.92,
+    "D": 4.32,
+    "L": 3.98,
+    "U": 2.88,
+    "C": 2.71,
+    "M": 2.61,
+    "F": 2.30,
+    "Y": 2.11,
+    "W": 2.09,
+    "G": 2.03,
+    "P": 1.82,
+    "B": 1.49,
+    "V": 1.11,
+    "K": 0.69,
+    "X": -10,
+    "Q": -10,
+    "J": -10,
+    "Z": -10,
+}
+
+
+def _get_frequency(c: str) -> float:
+    return freq_table.get(c.upper(), 0) / 2 + 1
+
+
 def xor_scorer(s: str) -> float:
     score = 0
     prev_char_byte = -1
+    num_caps = 0
     for c in s:
         char_byte = ord(c)
         # no one is putting control chars in their message
         if _is_control_char(char_byte):
-            score -= 5
+            score -= 20
         elif _is_punctuation_byte(char_byte):
-            score -= 3
+            score -= 20
         elif char_byte > 127:
-            score -= 1
-        elif (char_byte >= 65 and char_byte <= 90) or (char_byte >= 97 and char_byte <= 122) or char_byte == 32:
-            score += 1
+            score -= 20
+        elif char_byte == 32:
+            score += 5
+        elif char_byte >= 65 and char_byte <= 90:
+            score += _get_frequency(c)
+            num_caps += 1
+        elif char_byte >= 97 and char_byte <= 122:
+            score += _get_frequency(c)
+        elif char_byte >= 48 and char_byte <= 57:
+            score -= 10
 
         # # punctuation very rarely occurs back to back
         # if _is_punctuation_byte(char_byte) and _is_punctuation_byte(prev_char_byte):
@@ -119,6 +161,56 @@ def xor_scorer(s: str) -> float:
         #         score -= 2
 
         prev_char_byte = char_byte
+
+    if num_caps == len(s):
+        score += 20
+
+    return score
+
+
+def _get_frequency_v2(c: str) -> float:
+    return freq_table.get(c.upper(), 0) / 2 + 1
+
+
+def xor_scorer_v2(s: str) -> float:
+    score = 0
+    prev_char_byte = -1
+    num_caps = 0
+    for c in s:
+        char_byte = ord(c)
+        # no one is putting control chars in their message
+        if _is_control_char(char_byte):
+            score -= 200
+        elif _is_punctuation_byte(char_byte):
+            if char_byte not in (44, 46):
+                score -= 20
+        elif char_byte > 127:
+            score -= 200
+        elif char_byte == 32:
+            score += 5
+        elif char_byte >= 65 and char_byte <= 90:
+            score += _get_frequency(c)
+            if prev_char_byte >= 97 and prev_char_byte <= 122:
+                score -= 5
+            num_caps += 1
+        elif char_byte >= 97 and char_byte <= 122:
+            score += _get_frequency(c)
+            score += 0.25
+        elif char_byte >= 48 and char_byte <= 57:
+            score -= 100
+
+        # # punctuation very rarely occurs back to back
+        # if _is_punctuation_byte(char_byte) and _is_punctuation_byte(prev_char_byte):
+        #     # some cases like "((" are okay but still unusual
+        #     if char_byte != prev_char_byte:
+        #         score -= 5
+        #     else:
+        #         score -= 2
+
+        prev_char_byte = char_byte
+
+    if num_caps == len(s) and num_caps > 5:
+        score += 200
 
     return score
 

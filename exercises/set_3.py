@@ -1,9 +1,10 @@
+from itertools import product
 from random import choice
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 from struct import pack
 
 from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
-from exercises.set_1 import process_repeating_xor, decrypt_aes128_ecb, encrypt_aes128_ecb
+from exercises.set_1 import process_repeating_xor, decrypt_aes128_ecb, encrypt_aes128_ecb, xor_scorer, xor_scorer_v2
 from exercises.utils import (
     str_to_chunks,
     pkcs7_unpad,
@@ -124,3 +125,176 @@ def ctr_stream(s: str, key: str, nonce: int, block_size: int = 16) -> str:
             curr_enc = encrypt_aes128_ecb(pack("<QQ", nonce, counter // block_size).decode(DEFAULT_ENCODING), key)
 
     return curr_str
+
+
+def _find_idx_candidates(idx_text: List[str], num_candidates: int = 3) -> Tuple[int, str, float, str]:
+    candidates = []
+    for i in range(256):
+        tmp = "".join([chr(ord(x[0]) ^ i) if x else "" for x in idx_text])
+        score = xor_scorer_v2(tmp)
+        candidates.append((i, chr(i), score, tmp))
+
+    return sorted(candidates, key=lambda x: x[2], reverse=True)[:num_candidates]
+
+
+TRIGRAMS = {
+    "THE",
+    "AND",
+    "ING",
+    "HER",
+    "THA",
+    "ENT",
+    "ERE",
+    "ION",
+    "ETH",
+    "NTH",
+    "HAT",
+    "INT",
+    "FOR",
+    "ALL",
+    "STH",
+    "TER",
+    "EST",
+    "TIO",
+    "HIS",
+    "OFT",
+    "HES",
+    "ITH",
+    "ERS",
+    "ATI",
+    "OTH",
+    "FTH",
+    "DTH",
+    "VER",
+    "TTH",
+    "THI",
+    "REA",
+    "SAN",
+    "WIT",
+    "ATE",
+    "ARE",
+    "EAR",
+    "RES",
+    "ONT",
+    "TIN",
+    "ESS",
+    "RTH",
+    "WAS",
+    "SOF",
+    "EAN",
+    "YOU",
+    "SIN",
+    "STO",
+    "IST",
+    "EDT",
+    "EOF",
+    "EVE",
+    "ONE",
+    "AST",
+    "ONS",
+    "DIN",
+    "OME",
+    "CON",
+    "ERA",
+    "STA",
+    "OUR",
+    "NCE",
+    "TED",
+    "GHT",
+    "HEM",
+    "MAN",
+    "HEN",
+    "NOT",
+    "ORE",
+    "OUT",
+    "ORT",
+    "ESA",
+    "ERT",
+    "SHE",
+    "ANT",
+    "NGT",
+    "EDI",
+    "ERI",
+    "EIN",
+    "NDT",
+    "NTO",
+    "ATT",
+    "ECO",
+    "AVE",
+    "MEN",
+    "HIN",
+    "HEA",
+    "IVE",
+    "EDA",
+    "INE",
+    "RAN",
+    "HEC",
+    "TAN",
+    "RIN",
+    "ILL",
+    "NDE",
+    "THO",
+    "HAN",
+    "COM",
+    "IGH",
+    "AIN",
+    "TUR",
+    "URN",
+    "HEA",
+    "EAD",
+}
+
+
+def get_block_candidates(encrypted_texts: List[str], num_candidates: int = 5) -> List[Tuple[int, str, float, str]]:
+    block_candidates = []
+    for i in range(max(map(len, encrypted_texts))):
+        tmp_idx_text = [x[i] if i < len(x) else "" for x in encrypted_texts]
+        tmp_num_candidates = num_candidates
+        if len(set(tmp_idx_text)) > 5:
+            tmp_num_candidates = 1
+        block_candidates.append(_find_idx_candidates(tmp_idx_text, tmp_num_candidates))
+
+    return block_candidates
+
+
+def make_block_candidate_products(
+    block_candidates: List[Tuple[int, str, float, str]]
+) -> List[Tuple[List[int], List[str], str]]:
+    candidates = []
+    for candidate in product(*block_candidates):
+        ords = []
+        chars = []
+        texts = []
+        for row in candidate:
+            ords.append(row[0])
+            chars.append(row[1])
+            texts.append(row[3])
+
+        text = ""
+        for zipped in zip(*texts):
+            text += "".join(zipped)
+
+        candidates.append((ords, chars, text))
+    return candidates
+
+
+def get_trigram_frequency(s: str) -> int:
+    score = 0
+    upper_s = s.upper()
+    for i in range(len(s) - 2):
+        if upper_s[i : i + 3] in TRIGRAMS:
+            score += 1
+    return score * 10
+
+
+def decrypt_ctr_texts(encrypted_texts: List[str]) -> List[str]:
+    # imperfect
+    all_block_candidates = get_block_candidates(encrypted_texts, 10)
+
+    results = []
+    for block_candidates in product(*all_block_candidates):
+        keystream = "".join([x[1] for x in block_candidates])
+        decrypt_results = [process_repeating_xor(encrypted_text, keystream) for encrypted_text in encrypted_texts]
+        scores = [get_trigram_frequency(x) + xor_scorer_v2(x) for x in decrypt_results]
+        results.append((decrypt_results, sum(scores) / len(scores), keystream))
+    return sorted(results, key=lambda x: x[1], reverse=True)[:5]
