@@ -1,5 +1,5 @@
 import pytest
-from exercises.utils import pkcs7_pad, pkcs7_unpad
+from exercises.utils import pkcs7_pad, pkcs7_unpad, pkcs7_unpad_aggressive
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,7 @@ from exercises.utils import pkcs7_pad, pkcs7_unpad
         ("YELLOW SUBMARINE", 20, "YELLOW SUBMARINE\x04\x04\x04\x04"),
     ],
 )
-def test_pkcs7_unad(given: str, given_block_size: int, expected: str) -> None:
+def test_pkcs7_pad(given: str, given_block_size: int, expected: str) -> None:
     assert pkcs7_pad(given, given_block_size) == expected
 
 
@@ -51,7 +51,46 @@ def test_pkcs7_unad(given: str, given_block_size: int, expected: str) -> None:
         ("abcdefghijklmno\x01", "abcdefghijklmno"),
         ("abcdefghijklmnop", "abcdefghijklmnop"),
         ("YELLOW SUBMARINE\x04\x04\x04\x04", "YELLOW SUBMARINE"),
+        ("ICE ICE BABY\x04\x04\x04\x04", "ICE ICE BABY"),
     ],
 )
-def test_pkcs7_pad(given: str, expected: str) -> None:
+def test_pkcs7_unpad(given: str, expected: str) -> None:
     assert pkcs7_unpad(given) == expected
+
+
+@pytest.mark.parametrize(
+    "given, expected",
+    [
+        ("", ""),
+        ("\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10", ""),
+        ("a\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F", "a"),
+        ("ab\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E\x0E", "ab"),
+        ("abc\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D\x0D", "abc"),
+        ("abcd\x0C\x0C\x0C\x0C\x0C\x0C\x0C\x0C\x0C\x0C\x0C\x0C", "abcd"),
+        ("abcde\x0B\x0B\x0B\x0B\x0B\x0B\x0B\x0B\x0B\x0B\x0B", "abcde"),
+        ("abcdef\x0A\x0A\x0A\x0A\x0A\x0A\x0A\x0A\x0A\x0A", "abcdef"),
+        ("abcdefg\x09\x09\x09\x09\x09\x09\x09\x09\x09", "abcdefg"),
+        ("abcdefgh\x08\x08\x08\x08\x08\x08\x08\x08", "abcdefgh"),
+        ("abcdefghi\x07\x07\x07\x07\x07\x07\x07", "abcdefghi"),
+        ("abcdefghij\x06\x06\x06\x06\x06\x06", "abcdefghij"),
+        ("abcdefghijk\x05\x05\x05\x05\x05", "abcdefghijk"),
+        ("abcdefghijkl\x04\x04\x04\x04", "abcdefghijkl"),
+        ("abcdefghijklm\x03\x03\x03", "abcdefghijklm"),
+        ("abcdefghijklmn\x02\x02", "abcdefghijklmn"),
+        ("abcdefghijklmno\x01", "abcdefghijklmno"),
+        ("abcdefghijklmnop", "abcdefghijklmnop"),
+        ("YELLOW SUBMARINE\x04\x04\x04\x04", "YELLOW SUBMARINE"),
+        ("ICE ICE BABY\x04\x04\x04\x04", "ICE ICE BABY"),
+    ],
+)
+def test_pkcs7_unpad_aggressive(given: str, expected: str) -> None:
+    assert pkcs7_unpad_aggressive(given) == expected
+
+
+@pytest.mark.parametrize(
+    "given",
+    [("ICE ICE BABY\x05\x05\x05\x05"), ("ICE ICE BABY\x01\x02\x03\x04")],
+)
+def test_pkcs7_unpad_aggressive_err(given: str) -> None:
+    with pytest.raises(ValueError):
+        pkcs7_unpad_aggressive(given)

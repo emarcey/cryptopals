@@ -7,18 +7,23 @@ from typing import Dict
 from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import multiline_base64_to_plaintext, base64_to_plaintext
 from exercises.set_2 import (
-    decrypt_aes_128_cbc,
-    encrypt_aes_128_cbc,
-    detect_ecb_or_cbc,
-    encrypt_ecb_or_cbc,
-    hack_admin_user,
-    Oracle,
-    find_key_block_size,
     byte_at_a_time_decryption,
+    byte_at_a_time_decryption_with_prefix,
+    decrypt_aes128_cbc,
+    detect_ecb_or_cbc,
+    encrypt_aes128_cbc,
+    encrypt_ecb_or_cbc,
+    find_key_block_size,
+    find_prefix_size,
+    hack_admin_user,
     kv_parser,
     kv_serializer,
+    Oracle,
+    PrefixOracle,
     profile_for,
     ProfileOracle,
+    hack_admin_cbc,
+    CBCProfileOracle,
 )
 from exercises.utils import gen_aes_key
 
@@ -26,15 +31,15 @@ play_that_text = "I'm back and I'm ringin' the bell \nA rockin' on the mike whil
 yellow_submarine = "YELLOW SUBMARINE"
 
 
-def test_decrypt_aes_128_cbc() -> None:
+def test_decrypt_aes128_cbc() -> None:
     with open(f"{os.getcwd()}/data/set2_challenge9.txt", "r") as f:
         text = "".join([line.strip() for line in f])
-        assert play_that_text == decrypt_aes_128_cbc(base64_to_plaintext(text), yellow_submarine, "\x00" * 16)
+        assert play_that_text == decrypt_aes128_cbc(base64_to_plaintext(text), yellow_submarine, "\x00" * 16)
 
 
-def test_encrypt_aes_128_cbc() -> None:
-    x = encrypt_aes_128_cbc(play_that_text, yellow_submarine, "\x00" * 16)
-    assert play_that_text == decrypt_aes_128_cbc(
+def test_encrypt_aes128_cbc() -> None:
+    x = encrypt_aes128_cbc(play_that_text, yellow_submarine, "\x00" * 16)
+    assert play_that_text == decrypt_aes128_cbc(
         x,
         yellow_submarine,
         "\x00" * 16,
@@ -95,3 +100,28 @@ def test_hack_admin_user() -> None:
         "uid": "11111111111",
         "role": "admin",
     }
+
+
+def test_find_prefix_size() -> None:
+    for i in range(1000):
+        p = PrefixOracle()
+        block_size = find_key_block_size(p)
+        assert find_prefix_size(p, block_size) == len(p._prefix_str)
+
+
+def test_byte_at_a_time_decryption_with_prefix() -> None:
+    for i in range(10):
+        o = PrefixOracle()
+        assert (
+            multiline_base64_to_plaintext(byte_at_a_time_decryption_with_prefix(o))
+            == "Rollin' in my 5.0\nWith my rag-top down so my hair can blow\nThe girlies on standby waving just to say hi\nDid you stop? No, I just drove by\n"
+        )
+
+
+def test_hack_admin_cbc() -> None:
+    for i in range(10):
+        o = CBCProfileOracle()
+        tmp = o.encrypt(";admin;")
+        assert "admin" not in o.get_kvs(tmp)
+        result = hack_admin_cbc(o)
+        assert result["admin"] == "true"
