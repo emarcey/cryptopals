@@ -46,16 +46,16 @@ def test_encrypt_aes128_cbc() -> None:
     )
 
 
-def test_detect_ecb_or_cbc() -> None:
-    for i in range(1000):
-        text = gen_aes_key().decode(DEFAULT_ENCODING) * 10
-        encrypted, enc_type = encrypt_ecb_or_cbc(text)
-        assert enc_type == detect_ecb_or_cbc(encrypted)
+@pytest.mark.parametrize("execution_number", range(10))
+def test_detect_ecb_or_cbc(execution_number: int) -> None:
+    text = gen_aes_key().decode(DEFAULT_ENCODING) * 10
+    encrypted, enc_type = encrypt_ecb_or_cbc(text)
+    assert enc_type == detect_ecb_or_cbc(encrypted)
 
 
-def test_find_key_block_size() -> None:
-    for i in range(1000):
-        assert find_key_block_size(Oracle()) == 16
+@pytest.mark.parametrize("execution_number", range(1000))
+def test_find_key_block_size(execution_number: int) -> None:
+    assert find_key_block_size(Oracle()) == 16
 
 
 def test_byte_at_a_time_decryption() -> None:
@@ -102,26 +102,26 @@ def test_hack_admin_user() -> None:
     }
 
 
-def test_find_prefix_size() -> None:
-    for i in range(1000):
-        p = PrefixOracle()
-        block_size = find_key_block_size(p)
-        assert find_prefix_size(p, block_size) == len(p._prefix_str)
+@pytest.mark.parametrize("execution_number", range(1000))
+def test_find_prefix_size(execution_number: int) -> None:
+    p = PrefixOracle()
+    block_size = find_key_block_size(p)
+    assert find_prefix_size(p, block_size) == len(p._prefix_str)
 
 
-def test_byte_at_a_time_decryption_with_prefix() -> None:
-    for i in range(10):
-        o = PrefixOracle()
-        assert (
-            multiline_base64_to_plaintext(byte_at_a_time_decryption_with_prefix(o))
-            == "Rollin' in my 5.0\nWith my rag-top down so my hair can blow\nThe girlies on standby waving just to say hi\nDid you stop? No, I just drove by\n"
-        )
+@pytest.mark.parametrize("execution_number", range(10))
+def test_byte_at_a_time_decryption_with_prefix(execution_number: int) -> None:
+    o = PrefixOracle()
+    assert (
+        multiline_base64_to_plaintext(byte_at_a_time_decryption_with_prefix(o))
+        == "Rollin' in my 5.0\nWith my rag-top down so my hair can blow\nThe girlies on standby waving just to say hi\nDid you stop? No, I just drove by\n"
+    )
 
 
-def test_hack_admin_cbc() -> None:
-    for i in range(10):
-        o = CBCProfileOracle()
-        tmp = o.encrypt(";admin;")
-        assert "admin" not in o.get_kvs(tmp)
-        result = hack_admin_cbc(o)
-        assert result["admin"] == "true"
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hack_admin_cbc(execution_number: int) -> None:
+    o = CBCProfileOracle()
+    tmp = o.encrypt(";admin;")
+    assert "admin" not in o.get_kvs(tmp)
+    result = hack_admin_cbc(o)
+    assert result["admin"] == "true"

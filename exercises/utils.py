@@ -1,3 +1,4 @@
+import time
 import secrets
 from typing import List
 
@@ -55,3 +56,8 @@ def _make_salt(min_len: int = 5, max_len: int = 10) -> bytes:
 
 def salt_bytes(b: bytes) -> bytes:
     return _make_salt() + b + _make_salt()
+
+
+def rand_sleep(min_val: int, max_val: int) -> None:
+    t = secrets.randbelow(max_val - min_val) + min_val
+    time.sleep(t)

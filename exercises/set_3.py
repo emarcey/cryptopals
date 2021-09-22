@@ -1,19 +1,21 @@
 from itertools import product
 from random import choice
-from typing import Any, List, Tuple
 from struct import pack
+import time
+from typing import Any, List, Tuple
 
 from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
-from exercises.set_1 import process_repeating_xor, decrypt_aes128_ecb, encrypt_aes128_ecb, xor_scorer, xor_scorer_v2
-from exercises.utils import (
-    str_to_chunks,
-    pkcs7_unpad,
-    pkcs7_pad,
-    gen_aes_key,
-    salt_bytes,
-    is_pkcs7_padded,
+from exercises.set_1 import (
+    decrypt_aes128_ecb,
+    encrypt_aes128_ecb,
+    find_xor_char_from_text,
+    process_repeating_xor,
+    transpose_chunks,
+    xor_char,
+    xor_scorer,
 )
 from exercises.set_2 import decrypt_aes128_cbc, encrypt_aes128_cbc
+from exercises.utils import gen_aes_key, is_pkcs7_padded, pkcs7_pad, pkcs7_unpad, str_to_chunks, rand_sleep
 
 
 def decrypt_aes128_cbc_no_pad(s: str, key: str, iv: str) -> str:
@@ -131,7 +133,7 @@ def _find_idx_candidates(idx_text: List[str], num_candidates: int = 3) -> Tuple[
     candidates = []
     for i in range(256):
         tmp = "".join([chr(ord(x[0]) ^ i) if x else "" for x in idx_text])
-        score = xor_scorer_v2(tmp)
+        score = xor_scorer(tmp)
         candidates.append((i, chr(i), score, tmp))
 
     return sorted(candidates, key=lambda x: x[2], reverse=True)[:num_candidates]
@@ -289,12 +291,124 @@ def get_trigram_frequency(s: str) -> int:
 
 def decrypt_ctr_texts(encrypted_texts: List[str]) -> List[str]:
     # imperfect
-    all_block_candidates = get_block_candidates(encrypted_texts, 10)
+    all_block_candidates = get_block_candidates(encrypted_texts, 1)
 
     results = []
     for block_candidates in product(*all_block_candidates):
         keystream = "".join([x[1] for x in block_candidates])
         decrypt_results = [process_repeating_xor(encrypted_text, keystream) for encrypted_text in encrypted_texts]
-        scores = [get_trigram_frequency(x) + xor_scorer_v2(x) for x in decrypt_results]
+        scores = [get_trigram_frequency(x) + xor_scorer(x) for x in decrypt_results]
         results.append((decrypt_results, sum(scores) / len(scores), keystream))
     return sorted(results, key=lambda x: x[1], reverse=True)[:5]
+
+
+### Challenge 20
+# The same as 19, but with a trunc function that doesn't do everything
+def decrypt_ctr_texts_trunc(encrypted_texts: List[str]) -> List[str]:
+    min_len = min(map(len, encrypted_texts))
+    truncated_texts = [x[:min_len] for x in encrypted_texts]
+    return decrypt_ctr_texts(truncated_texts)
+
+
+### Challenge 21
+
+MERSENNE_W = 32
+MERSENNE_N = 624
+MERSENNE_M = 397
+MERSENNE_R = 31
+MERSENNE_A = 0x9908B0DF
+MERSENNE_U = 11
+MERSENNE_D = 0xFFFFFFFF
+MERSENNE_S = 7
+MERSENNE_B = 0x9D2C5680
+MERSENNE_T = 15
+MERSENNE_C = 0xEFC60000
+MERSENNE_L = 18
+MERSENNE_F = 1812433253
+
+MERSENNE_LOWEST_W_BITS = 0xFFFFFFFF
+
+
+class MersenneRng:
+    def __init__(self, seed: int):
+        self.mt = [0 for i in range(MERSENNE_N)]
+        self.index = MERSENNE_N + 1
+        self.lower_mask = (1 << MERSENNE_R) - 1
+        self.upper_mask = (~self.lower_mask) & MERSENNE_LOWEST_W_BITS
+        self._seed = seed
+        self._lowest_bits_mask = (1 << MERSENNE_W) - 1
+        self.seed(seed)
+
+    def seed(self, seed: int) -> None:
+        self.index = MERSENNE_N
+        self.mt[0] = seed
+        for i in range(1, MERSENNE_N):
+            tmp = (MERSENNE_F * self.mt[i - 1]) ^ (self.mt[i - 1] >> (MERSENNE_W - 2)) + i
+            self.mt[i] = tmp & self._lowest_bits_mask
+
+    def twist(self) -> None:
+        for i in range(MERSENNE_N):
+            x = (self.mt[i] & self.upper_mask) + (self.mt[(i + 1) % MERSENNE_N] & self.lower_mask)
+            x_a = x >> 1
+            if x % 2 != 0:
+                x_a = x_a ^ MERSENNE_A
+            self.mt[i] = self.mt[(i + MERSENNE_M) % MERSENNE_N] ^ x_a
+        self.index = 0
+
+    @staticmethod
+    def temper_y(y: int) -> int:
+        y ^= (y >> MERSENNE_U) & MERSENNE_D
+        y ^= (y << MERSENNE_S) & MERSENNE_B
+        y ^= (y << MERSENNE_T) & MERSENNE_C
+        y ^= y >> MERSENNE_L
+        return y
+
+    def get(self) -> None:
+        if self.index > MERSENNE_N:
+            raise ValueError("Generator was never seeded")
+        if self.index == MERSENNE_N:
+            self.twist()
+
+        y = self.temper_y(self.mt[self.index])
+
+        self.index += 1
+        return y & self._lowest_bits_mask
+
+
+### Challenge 22
+def crack_rng(initial_val: int, min_sleep: int = 40, max_sleep: int = 1000) -> int:
+    curr_time = int(time.time())
+    for i in range(min_sleep, max_sleep):
+        new_seed = curr_time - i
+        new_rng = MersenneRng(new_seed)
+        if new_rng.get() == initial_val:
+            return new_seed
+
+    raise ValueError(f"Could not find seed.")
+
+
+## Challenge 23
+def untemper(y: int) -> int:
+    y ^= y >> MERSENNE_L
+    y = ((y << MERSENNE_T) & MERSENNE_C) ^ y
+    s_mask = (1 << MERSENNE_S) - 1
+    y ^= (y << MERSENNE_S) & MERSENNE_B & (s_mask << MERSENNE_S)
+    y ^= (y << MERSENNE_S) & MERSENNE_B & (s_mask << (MERSENNE_S * 2))
+    y ^= (y << MERSENNE_S) & MERSENNE_B & (s_mask << (MERSENNE_S * 3))
+    y ^= (y << MERSENNE_S) & MERSENNE_B & (s_mask << (MERSENNE_S * 4))
+    u_mask = (1 << MERSENNE_U) - 1
+    y ^= (y >> MERSENNE_U) & MERSENNE_D & (u_mask << (MERSENNE_U * 2))
+    y ^= (y >> MERSENNE_U) & MERSENNE_D & (u_mask << (MERSENNE_U))
+    y ^= (y >> MERSENNE_U) & u_mask
+    return y
+
+
+def clone_rng(rng: MersenneRng) -> MersenneRng:
+    vals = []
+    for i in range(MERSENNE_N):
+        val = rng.get()
+        vals.append((val, untemper(val)))
+
+    new_rng = MersenneRng(1)
+    new_rng.mt = [val[1] for val in vals]
+    return new_rng

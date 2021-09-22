@@ -168,53 +168,6 @@ def xor_scorer(s: str) -> float:
     return score
 
 
-def _get_frequency_v2(c: str) -> float:
-    return freq_table.get(c.upper(), 0) / 2 + 1
-
-
-def xor_scorer_v2(s: str) -> float:
-    score = 0
-    prev_char_byte = -1
-    num_caps = 0
-    for c in s:
-        char_byte = ord(c)
-        # no one is putting control chars in their message
-        if _is_control_char(char_byte):
-            score -= 200
-        elif _is_punctuation_byte(char_byte):
-            if char_byte not in (44, 46):
-                score -= 20
-        elif char_byte > 127:
-            score -= 200
-        elif char_byte == 32:
-            score += 5
-        elif char_byte >= 65 and char_byte <= 90:
-            score += _get_frequency(c)
-            if prev_char_byte >= 97 and prev_char_byte <= 122:
-                score -= 5
-            num_caps += 1
-        elif char_byte >= 97 and char_byte <= 122:
-            score += _get_frequency(c)
-            score += 0.25
-        elif char_byte >= 48 and char_byte <= 57:
-            score -= 100
-
-        # # punctuation very rarely occurs back to back
-        # if _is_punctuation_byte(char_byte) and _is_punctuation_byte(prev_char_byte):
-        #     # some cases like "((" are okay but still unusual
-        #     if char_byte != prev_char_byte:
-        #         score -= 5
-        #     else:
-        #         score -= 2
-
-        prev_char_byte = char_byte
-
-    if num_caps == len(s) and num_caps > 5:
-        score += 200
-
-    return score
-
-
 def find_xor_char_from_text(s: str) -> Tuple[str, float, str]:
     ascii_bytes = s.encode("utf-8")
     scores = []
