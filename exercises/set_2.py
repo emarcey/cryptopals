@@ -229,7 +229,7 @@ def byte_at_a_time_decryption_with_prefix(oracle: PrefixOracle) -> str:
 
 
 ### Challenge 16
-class CBCProfileOracle:
+class CbcProfileOracle:
     def __init__(self):
         self._key = gen_aes_key(choice([16, 24, 32]))
         self._prefix_str = "comment1=cooking%20MCs;userdata="
@@ -248,7 +248,7 @@ class CBCProfileOracle:
         return kv_parser(decrypted, ";", "=")
 
 
-def cbc_find_prefix_len(oracle: CBCProfileOracle, block_size: int) -> int:
+def cbc_find_prefix_len(oracle: CbcProfileOracle, block_size: int) -> int:
     base_encrypt = oracle.encrypt("")
     big_encrypt = oracle.encrypt("A" * (16 * (len(base_encrypt) // block_size)))
 
@@ -264,7 +264,7 @@ def cbc_find_prefix_len(oracle: CBCProfileOracle, block_size: int) -> int:
             return initial_len + block_size - i
 
 
-def cbc_cut_and_paste(oracle: CBCProfileOracle) -> str:
+def cbc_cut_and_paste(oracle: CbcProfileOracle) -> str:
     block_size = find_key_block_size(oracle)
     prefix_size = cbc_find_prefix_len(oracle, block_size)
 
@@ -287,6 +287,6 @@ def cbc_cut_and_paste(oracle: CBCProfileOracle) -> str:
     )
 
 
-def hack_admin_cbc(oracle: CBCProfileOracle) -> Dict[str, str]:
+def hack_admin_cbc(oracle: CbcProfileOracle) -> Dict[str, str]:
     cut_and_paste = cbc_cut_and_paste(oracle)
     return oracle.get_kvs(cut_and_paste)

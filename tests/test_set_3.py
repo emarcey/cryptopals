@@ -8,7 +8,7 @@ from exercises.utils import pkcs7_unpad, gen_aes_key, rand_sleep
 from exercises.set_1 import base64_to_plaintext
 from exercises.set_3 import (
     attack_padding_oracle,
-    CBCPaddingOracle,
+    CbcPaddingOracle,
     ctr_stream,
     decrypt_ctr_texts,
     decrypt_ctr_texts_trunc,
@@ -22,7 +22,7 @@ from exercises.set_3 import (
 
 @pytest.mark.parametrize("execution_number", range(10))
 def test_attack_padding_oracle(execution_number: int) -> None:
-    oracle = CBCPaddingOracle()
+    oracle = CbcPaddingOracle()
     ciphertext, initial_iv = oracle.encrypt()
     assert pkcs7_unpad(oracle.decrypt(ciphertext, initial_iv)) == attack_padding_oracle(ciphertext, initial_iv, oracle)
 

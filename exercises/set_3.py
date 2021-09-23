@@ -42,7 +42,7 @@ def encrypt_aes128_cbc_no_pad(s: str, key: str, iv: str) -> str:
 
 
 ### Challenge 17
-class CBCPaddingOracle:
+class CbcPaddingOracle:
     def __init__(self):
         self.string_opts = [
             "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
@@ -85,7 +85,7 @@ def _make_iv(iv: str, block_size: int, pad_len: int, possible_byte: int, curr_st
     return forced_iv
 
 
-def attack_block(block: str, iv: str, oracle: CBCPaddingOracle) -> str:
+def attack_block(block: str, iv: str, oracle: CbcPaddingOracle) -> str:
     block_size = len(block)
     curr_str = ""
     for pad_len in range(1, BLOCK_SIZE + 1):
@@ -106,7 +106,7 @@ def attack_block(block: str, iv: str, oracle: CBCPaddingOracle) -> str:
     return curr_str
 
 
-def attack_padding_oracle(ciphertext: str, iv: str, oracle: CBCPaddingOracle) -> str:
+def attack_padding_oracle(ciphertext: str, iv: str, oracle: CbcPaddingOracle) -> str:
     all_blocks = [iv] + str_to_chunks(ciphertext, 16, -1, True)
 
     curr_str = ""
@@ -150,27 +150,6 @@ def get_block_candidates(encrypted_texts: List[str], num_candidates: int = 5) ->
         block_candidates.append(_find_idx_candidates(tmp_idx_text, tmp_num_candidates))
 
     return block_candidates
-
-
-def make_block_candidate_products(
-    block_candidates: List[Tuple[int, str, float, str]]
-) -> List[Tuple[List[int], List[str], str]]:
-    candidates = []
-    for candidate in product(*block_candidates):
-        ords = []
-        chars = []
-        texts = []
-        for row in candidate:
-            ords.append(row[0])
-            chars.append(row[1])
-            texts.append(row[3])
-
-        text = ""
-        for zipped in zip(*texts):
-            text += "".join(zipped)
-
-        candidates.append((ords, chars, text))
-    return candidates
 
 
 def get_trigram_frequency(s: str) -> int:

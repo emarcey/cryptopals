@@ -23,7 +23,7 @@ from exercises.set_2 import (
     profile_for,
     ProfileOracle,
     hack_admin_cbc,
-    CBCProfileOracle,
+    CbcProfileOracle,
 )
 from exercises.utils import gen_aes_key
 
@@ -120,7 +120,7 @@ def test_byte_at_a_time_decryption_with_prefix(execution_number: int) -> None:
 
 @pytest.mark.parametrize("execution_number", range(10))
 def test_hack_admin_cbc(execution_number: int) -> None:
-    o = CBCProfileOracle()
+    o = CbcProfileOracle()
     tmp = o.encrypt(";admin;")
     assert "admin" not in o.get_kvs(tmp)
     result = hack_admin_cbc(o)
