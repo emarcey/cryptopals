@@ -302,7 +302,7 @@ def crack_rng(initial_val: int, min_sleep: int = 40, max_sleep: int = 1000) -> i
     raise ValueError(f"Could not find seed.")
 
 
-## Challenge 23
+### Challenge 23
 def untemper(y: int) -> int:
     y ^= y >> MERSENNE_L
     y = ((y << MERSENNE_T) & MERSENNE_C) ^ y
@@ -329,6 +329,7 @@ def clone_rng(rng: MersenneRng) -> MersenneRng:
     return new_rng
 
 
+### Challenge 24
 def crack_rng_16_bit_encrypt(initial_text: str, encrypted_text: str) -> int:
     len_initial_text = len(initial_text)
     len_encrypted_text = len(encrypted_text)
