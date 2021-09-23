@@ -3,8 +3,9 @@ from random import choice
 from struct import pack
 import time
 from typing import Any, List, Tuple
+from secrets import randbelow, token_bytes
 
-from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
+from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING, TRIGRAMS
 from exercises.set_1 import (
     decrypt_aes128_ecb,
     encrypt_aes128_ecb,
@@ -139,114 +140,6 @@ def _find_idx_candidates(idx_text: List[str], num_candidates: int = 3) -> Tuple[
     return sorted(candidates, key=lambda x: x[2], reverse=True)[:num_candidates]
 
 
-TRIGRAMS = {
-    "THE",
-    "AND",
-    "ING",
-    "HER",
-    "THA",
-    "ENT",
-    "ERE",
-    "ION",
-    "ETH",
-    "NTH",
-    "HAT",
-    "INT",
-    "FOR",
-    "ALL",
-    "STH",
-    "TER",
-    "EST",
-    "TIO",
-    "HIS",
-    "OFT",
-    "HES",
-    "ITH",
-    "ERS",
-    "ATI",
-    "OTH",
-    "FTH",
-    "DTH",
-    "VER",
-    "TTH",
-    "THI",
-    "REA",
-    "SAN",
-    "WIT",
-    "ATE",
-    "ARE",
-    "EAR",
-    "RES",
-    "ONT",
-    "TIN",
-    "ESS",
-    "RTH",
-    "WAS",
-    "SOF",
-    "EAN",
-    "YOU",
-    "SIN",
-    "STO",
-    "IST",
-    "EDT",
-    "EOF",
-    "EVE",
-    "ONE",
-    "AST",
-    "ONS",
-    "DIN",
-    "OME",
-    "CON",
-    "ERA",
-    "STA",
-    "OUR",
-    "NCE",
-    "TED",
-    "GHT",
-    "HEM",
-    "MAN",
-    "HEN",
-    "NOT",
-    "ORE",
-    "OUT",
-    "ORT",
-    "ESA",
-    "ERT",
-    "SHE",
-    "ANT",
-    "NGT",
-    "EDI",
-    "ERI",
-    "EIN",
-    "NDT",
-    "NTO",
-    "ATT",
-    "ECO",
-    "AVE",
-    "MEN",
-    "HIN",
-    "HEA",
-    "IVE",
-    "EDA",
-    "INE",
-    "RAN",
-    "HEC",
-    "TAN",
-    "RIN",
-    "ILL",
-    "NDE",
-    "THO",
-    "HAN",
-    "COM",
-    "IGH",
-    "AIN",
-    "TUR",
-    "URN",
-    "HEA",
-    "EAD",
-}
-
-
 def get_block_candidates(encrypted_texts: List[str], num_candidates: int = 5) -> List[Tuple[int, str, float, str]]:
     block_candidates = []
     for i in range(max(map(len, encrypted_texts))):
@@ -374,6 +267,28 @@ class MersenneRng:
         self.index += 1
         return y & self._lowest_bits_mask
 
+    def get_8bit(self) -> None:
+        return (self.get() >> 8) & 0xFF
+
+    def encrypt(self, s: str) -> str:
+        curr_str = ""
+        for c in s:
+            curr_str += chr(ord(c) ^ self.get_8bit())
+
+        return curr_str
+
+    def encrypt_with_prefix(self, s: str, min_prefix_len: int = 16, max_prefix_len: int = 64) -> str:
+        prefix = token_bytes(randbelow(max_prefix_len - min_prefix_len) + min_prefix_len).decode(DEFAULT_ENCODING)
+        print()
+        return self.encrypt(prefix + s)
+
+    def get_password_token(self, token_len: int = 32) -> str:
+        curr_str = ""
+        for i in range(token_len):
+            curr_str += chr(self.get_8bit())
+
+        return curr_str
+
 
 ### Challenge 22
 def crack_rng(initial_val: int, min_sleep: int = 40, max_sleep: int = 1000) -> int:
@@ -412,3 +327,33 @@ def clone_rng(rng: MersenneRng) -> MersenneRng:
     new_rng = MersenneRng(1)
     new_rng.mt = [val[1] for val in vals]
     return new_rng
+
+
+def crack_rng_16_bit_encrypt(initial_text: str, encrypted_text: str) -> int:
+    len_initial_text = len(initial_text)
+    len_encrypted_text = len(encrypted_text)
+    test_text = "A" * (len_encrypted_text - len_initial_text) + initial_text
+    for i in range(65536):
+        test_rng = MersenneRng(i)
+        test_encrypted_text = test_rng.encrypt(test_text)
+        if encrypted_text[-len_initial_text:] == test_encrypted_text[-len_initial_text:]:
+            return i
+    raise ValueError("No 16 bit key worked :(")
+
+
+def generate_random_password_token(curr_time: int, token_len: int = 32) -> str:
+    rng = MersenneRng(curr_time)
+    return rng.encrypt_with_prefix("", token_len, token_len)
+
+
+def crack_password_token(password_token: str, time_range: int = 2048) -> int:
+    curr_time = int(time.time())
+    token_len = len(password_token)
+    for i in range(0, time_range):
+        new_seed = curr_time - i
+        new_rng = MersenneRng(new_seed)
+
+        if new_rng.get_password_token(token_len) == password_token:
+            return new_seed
+
+    raise ValueError(f"Could not find seed.")

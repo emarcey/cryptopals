@@ -15,6 +15,8 @@ from exercises.set_3 import (
     crack_rng,
     MersenneRng,
     clone_rng,
+    crack_rng_16_bit_encrypt,
+    crack_password_token,
 )
 
 
@@ -95,3 +97,39 @@ def test_clone_rng(execution_number: int) -> None:
     for i in range(624):
         assert initial_rng.get() == cloned_rng.get()
     time.sleep(1)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_rng_encrypt(execution_number: int) -> None:
+    seed = randbelow(2 ** 16)
+    rng1 = MersenneRng(seed)
+    random_text = token_bytes(randbelow(256) + 64).decode(DEFAULT_ENCODING)
+    rng2 = MersenneRng(seed)
+    assert rng2.encrypt(rng1.encrypt(random_text)) == random_text
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_rng_encrypt_with_prefix(execution_number: int) -> None:
+    seed = randbelow(2 ** 16)
+    rng1 = MersenneRng(seed)
+    random_text = token_bytes(randbelow(256) + 64).decode(DEFAULT_ENCODING)
+    rng2 = MersenneRng(seed)
+    assert rng2.encrypt(rng1.encrypt_with_prefix(random_text)).endswith(random_text)
+
+
+def test_crack_rng_16_bit_encrypt() -> None:
+    seed = randbelow(2 ** 16)
+    rng1 = MersenneRng(seed)
+    random_text = token_bytes(randbelow(256) + 64).decode(DEFAULT_ENCODING)
+    encrypted_text = rng1.encrypt_with_prefix(random_text)
+    assert crack_rng_16_bit_encrypt(random_text, encrypted_text) == seed
+
+
+@pytest.mark.parametrize("execution_number", range(5))
+def test_crack_password_token(execution_number: int) -> None:
+    min_sleep = 1
+    max_sleep = 10
+    rng = MersenneRng(seed=int(time.time()))
+    rand_sleep(min_sleep, max_sleep)
+    password_token = rng.get_password_token(randbelow(64) + 16)
+    assert crack_password_token(password_token) == rng._seed
