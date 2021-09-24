@@ -4,7 +4,14 @@ from secrets import randbelow, token_bytes
 
 from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import decode_base64_to_aes128_ecb
-from exercises.set_4 import AesCtrOracle, crack_aes_ctr_oracle, CtrProfileOracle, hack_admin_ctr
+from exercises.set_4 import (
+    AesCtrOracle,
+    crack_aes_ctr_oracle,
+    CtrProfileOracle,
+    hack_admin_ctr,
+    hack_cbc_iv_key_oracle,
+    CbcIvKeyProfileOracle,
+)
 
 
 @pytest.mark.parametrize("given_text,given_offset,given_newtext,expected", [("abcdefghijkl", 4, "111", "abcd111hijkl")])
@@ -30,3 +37,9 @@ def test_hack_admin_ctr(execution_number: int) -> None:
     assert "admin" not in o.get_kvs(tmp)
     result = hack_admin_ctr(o)
     assert result["admin"] == "true"
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hack_cbc_iv_key_oracle(execution_number: int) -> None:
+    o = CbcIvKeyProfileOracle()
+    assert hack_cbc_iv_key_oracle(o) == o._key.decode(DEFAULT_ENCODING)

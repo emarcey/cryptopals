@@ -2,7 +2,8 @@ from secrets import randbelow
 from typing import Dict
 
 from exercises.const import DEFAULT_ENCODING
-from exercises.set_2 import kv_parser
+from exercises.set_1 import process_repeating_xor
+from exercises.set_2 import encrypt_aes128_cbc, decrypt_aes128_cbc, kv_parser, find_key_block_size, cbc_find_prefix_len
 from exercises.set_3 import ctr_stream
 from exercises.utils import gen_aes_key
 
@@ -79,3 +80,51 @@ def hack_admin_ctr(oracle: CtrProfileOracle) -> Dict[str, str]:
     )
     result = oracle.get_kvs(hacked_str)
     return result
+
+
+### Challenge 27
+class CbcIvKeyProfileOracle:
+    def __init__(self):
+        self._key = gen_aes_key()
+        self._iv = self._key.decode(DEFAULT_ENCODING)
+        self._prefix_str = "comment1=cooking%20MCs;userdata="
+        self._suffix_str = ";comment2=%20like%20a%20pound%20of%20bacon"
+
+    @staticmethod
+    def _is_ascii_compliant(s: str) -> bool:
+        return all(ord(c) < 128 for c in s)
+
+    @staticmethod
+    def _clean(s: str) -> str:
+        return s.replace("=", '"="').replace(";", '";"')
+
+    def encrypt(self, s: str) -> str:
+        return encrypt_aes128_cbc(self._prefix_str + self._clean(s) + self._suffix_str, self._key, self._iv)
+
+    def decrypt(self, s: str) -> str:
+        decrypted = decrypt_aes128_cbc(s, self._key, self._iv)
+        if not self._is_ascii_compliant(decrypted):
+            raise ValueError(f"Text is not ASCII-compliant: {decrypted}")
+        return decrypted
+
+
+def hack_cbc_iv_key_oracle(oracle: CbcIvKeyProfileOracle) -> str:
+    dummy_text = "A" * 16 + "B" * 16 + "C" * 16
+    encrypted_text = oracle.encrypt(dummy_text)
+
+    block_size = find_key_block_size(oracle)
+    prefix_size = cbc_find_prefix_len(oracle, block_size)
+
+    block_1 = encrypted_text[prefix_size : prefix_size + block_size]
+    new_text = block_1 + "\x00" * 16 + block_1
+
+    error_text = ""
+    try:
+        oracle.decrypt(new_text)
+    except ValueError as e:
+        error_text = str(e).replace("Text is not ASCII-compliant: ", "")
+
+    if not error_text:
+        raise ValueError("Oracle did not raise ASCII compliance error")
+
+    return process_repeating_xor(error_text[:block_size], error_text[-block_size:])

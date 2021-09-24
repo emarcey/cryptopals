@@ -231,7 +231,7 @@ def byte_at_a_time_decryption_with_prefix(oracle: PrefixOracle) -> str:
 ### Challenge 16
 class CbcProfileOracle:
     def __init__(self):
-        self._key = gen_aes_key(choice([16, 24, 32]))
+        self._key = gen_aes_key()
         self._prefix_str = "comment1=cooking%20MCs;userdata="
         self._suffix_str = ";comment2=%20like%20a%20pound%20of%20bacon"
         self._iv = gen_aes_key().decode(DEFAULT_ENCODING)
