@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pytest
 from secrets import randbelow, token_bytes
@@ -11,6 +12,7 @@ from exercises.set_4 import (
     hack_admin_ctr,
     hack_cbc_iv_key_oracle,
     CbcIvKeyProfileOracle,
+    sha1_with_mac,
 )
 
 
@@ -43,3 +45,10 @@ def test_hack_admin_ctr(execution_number: int) -> None:
 def test_hack_cbc_iv_key_oracle(execution_number: int) -> None:
     o = CbcIvKeyProfileOracle()
     assert hack_cbc_iv_key_oracle(o) == o._key.decode(DEFAULT_ENCODING)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hack_cbc_iv_key_oracle(execution_number: int) -> None:
+    s = token_bytes(randbelow(256) + 32)
+    mac = token_bytes(randbelow(256) + 32)
+    assert sha1_with_mac(s.decode(DEFAULT_ENCODING), mac.decode(DEFAULT_ENCODING)) == hashlib.sha1(mac + s).hexdigest()

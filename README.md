@@ -17,9 +17,11 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 
 ## Wikipedia Articles
 
-* [Wiki article on block cipher encryption](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation)
-* [Wiki article on Mersenne Twister](https://en.wikipedia.org/wiki/Mersenne_Twister)
-* [Wiki article on base64 for encryption/decryption](https://en.wikipedia.org/wiki/Base64)
+* [Block cipher encryption](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation)
+* [Mersenne Twister](https://en.wikipedia.org/wiki/Mersenne_Twister)
+* [Base64 for encryption/decryption](https://en.wikipedia.org/wiki/Base64)
+* [SHA-1](https://en.wikipedia.org/wiki/SHA-1)
+* [Circular Shifts (left rotate)](https://en.wikipedia.org/wiki/Circular_shift)
 
 ## Reference Material
 

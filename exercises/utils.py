@@ -3,7 +3,7 @@ import secrets
 from typing import List
 
 
-def str_to_chunks(s: str, chunk_size: int, max_chunks: int, allow_partials: bool) -> List[str]:
+def str_to_chunks(s: str, chunk_size: int, max_chunks: int = -1, allow_partials: bool = True) -> List[str]:
     chunks = []
     num_chunks = 0
     for i in range(0, len(s), chunk_size):
