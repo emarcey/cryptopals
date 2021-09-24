@@ -13,6 +13,9 @@ from exercises.set_4 import (
     hack_cbc_iv_key_oracle,
     CbcIvKeyProfileOracle,
     sha1_with_mac,
+    Sha1Oracle,
+    length_extension_attack_mac_sha1,
+    md4,
 )
 
 
@@ -52,3 +55,32 @@ def test_hack_cbc_iv_key_oracle(execution_number: int) -> None:
     s = token_bytes(randbelow(256) + 32)
     mac = token_bytes(randbelow(256) + 32)
     assert sha1_with_mac(s.decode(DEFAULT_ENCODING), mac.decode(DEFAULT_ENCODING)) == hashlib.sha1(mac + s).hexdigest()
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_length_extension_attack_mac_sha1(execution_number: int) -> None:
+    oracle = Sha1Oracle()
+    message = "comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon"
+    new_message = ";admin=true"
+    hashed_message = oracle.sha1(message)
+    fake_message, fake_hash = length_extension_attack_mac_sha1(oracle, message, hashed_message, new_message)
+    assert fake_message.endswith(new_message)
+
+
+@pytest.mark.parametrize(
+    "given, expected",
+    [
+        ("", "31d6cfe0d16ae931b73c59d7e0c089c0"),
+        ("a", "bde52cb31de33e46245e05fbdbd6fb24"),
+        ("abc", "a448017aaf21d8525fc10ae87aa6729d"),
+        ("message digest", "d9130a8164549fe818874806e1c7014b"),
+        ("abcdefghijklmnopqrstuvwxyz", "d79e1c308aa5bbcdeea8ed63df412da9"),
+        ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", "043f8582f241db351ce627e153e7f0e4"),
+        (
+            "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+            "e33b4ddc9c38f2199c3e7b164fcc0536",
+        ),
+    ],
+)
+def test_md4(given: str, expected: str) -> None:
+    assert md4(given) == expected

@@ -56,6 +56,15 @@ def int_to_hex(i: int) -> str:
     return _int_to_hex(i)
 
 
+def hex_to_int(h: str) -> str:
+    total = 0
+    len_h = len(h)
+    for i in range(len_h):
+        total += HEX_CHARS.index(h[i].lower()) * (16 ** (len_h - i - 1))
+
+    return total
+
+
 def hex_xor(s1: str, s2: str) -> str:
     s1_int = int(s1, 16)
     s2_int = int(s2, 16)

@@ -14,6 +14,7 @@ Solutions for the [cryptopals](https://cryptopals.com/) problem set.
 Because I'm fallible and the internet is infinitely searchable. So if I got too stuck, I referenced a couple solutions.
 
 * [ricpacca](https://github.com/ricpacca/cryptopals/)
+* [Forging SHA1 Mac Length Extension Attack](https://www.synopsys.com/blogs/software-security/forging-sha-1-mac-using-length-extension-attack-python/)
 
 ## Wikipedia Articles
 
@@ -27,3 +28,4 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 
 * [ASCII character table](https://www.asciitable.com/)
 * [Bae64 Table](https://en.wikipedia.org/wiki/Base64#Base64_table)
+* [MD4 Algo](https://datatracker.ietf.org/doc/html/rfc1320)
