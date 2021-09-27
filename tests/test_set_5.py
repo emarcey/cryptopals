@@ -6,13 +6,14 @@ from exercises.set_5 import (
     _g_equals_1,
     _g_equals_p,
     _g_equals_p_minus_1,
+    break_srp,
     diffie_helman,
     diffie_helman_mitm_attack,
     diffie_helman_mitm_attack_adj_g,
     DiffieHelmanBot,
-    SrpServer,
-    SrpClient,
     srp,
+    SrpClient,
+    SrpServer,
 )
 from exercises.utils import gen_aes_key
 
@@ -75,3 +76,14 @@ def test_srp(execution_number: int) -> None:
     client = SrpClient(i, p, n)
     server = SrpServer(i, p, n)
     srp(client, server)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_break_srp(execution_number: int) -> None:
+    i = "evanmarcey@gmail.com"
+    p = gen_aes_key().decode(DEFAULT_ENCODING)
+    n = choice(STARTER_SAFE_PRIMES)
+    client = SrpClient(i, p, n)
+    server = SrpServer(i, p, n)
+    a_override = choice([0, n, n * 2])
+    break_srp(client, server, a_override)

@@ -160,6 +160,7 @@ class SrpClient:
         xH = hashlib.sha256((str(self._s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
         S = _mod_exp(self.B - self._k * _mod_exp(self._g, x, self._n), self._a + self.u * x, self._n)
+        self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
     def generate_hmac(self) -> str:
@@ -196,6 +197,7 @@ class SrpServer:
 
     def generate_k(self) -> None:
         S = _mod_exp(self.A * _mod_exp(self._v, self._u, self._n), self._b, self._n)
+        self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
     def validate_hmac(self, client_hmac: str) -> bool:
@@ -212,5 +214,21 @@ def srp(client: SrpClient, server: SrpServer):
     server.generate_k()
     client_hmac = client.generate_hmac()
     if not server.validate_hmac(client_hmac):
-        raise ValueError("Server to validate Client HMAC")
+        raise ValueError("Server unable to validate Client HMAC")
+    return
+
+
+### Challenge 37
+def break_srp(client: SrpClient, server: SrpServer, a_override: int):
+    i, A = client.generate_a()
+    s, B = server.generate_b(i, a_override)
+    client.calculate_u(s, B)
+    server.calculate_u()
+    client.generate_k()
+    server.generate_k()
+
+    fake_client_k = hashlib.sha256(str(0).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+    fake_hmac = hmac_sha256(fake_client_k, str(s).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+    if not server.validate_hmac(fake_hmac):
+        raise ValueError("Server unable to validate Client HMAC")
     return
