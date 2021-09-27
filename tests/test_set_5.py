@@ -1,8 +1,16 @@
 import pytest
-from secrets import randbelow, token_bytes
+from secrets import choice, randbelow, token_bytes
 
 from exercises.const import DEFAULT_ENCODING
-from exercises.set_5 import diffie_helman, DiffieHelmanBot, diffie_helman_mitm_attack
+from exercises.set_5 import (
+    _g_equals_1,
+    _g_equals_p,
+    _g_equals_p_minus_1,
+    diffie_helman,
+    diffie_helman_mitm_attack,
+    diffie_helman_mitm_attack_adj_g,
+    DiffieHelmanBot,
+)
 
 
 @pytest.mark.parametrize(
@@ -44,3 +52,12 @@ def test_diffie_helman_mitm_attack(execution_number: int) -> None:
     message_a = "Hi, how are you?"
     message_b = "Well, and you?"
     diffie_helman_mitm_attack(bot_a, bot_b, message_a, message_b)
+
+
+@pytest.mark.parametrize("execution_number", range(50))
+def test_diffie_helman_mitm_attack_adj_g(execution_number: int) -> None:
+    bot_a = DiffieHelmanBot()
+    bot_b = DiffieHelmanBot()
+    message = "Hi, how are you?"
+    f = choice([_g_equals_p, _g_equals_1, _g_equals_p_minus_1])
+    diffie_helman_mitm_attack_adj_g(bot_a, bot_b, f, message)
