@@ -26,6 +26,8 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 * [HMAC](https://en.wikipedia.org/wiki/HMAC)
 * [Diffie-Helman](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange)
 * [Modular Exponentiation](https://en.wikipedia.org/wiki/Modular_exponentiation)
+* [SRP](https://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)
+* [Primes to use for SRP](https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes)
 
 ## Reference Material
 
