@@ -3,7 +3,7 @@ import struct
 from typing import Dict, List, Optional, Tuple
 
 from exercises.const import DEFAULT_ENCODING
-from exercises.set_1 import hex_to_int, int_to_hex, process_repeating_xor
+from exercises.set_1 import hex_to_int, hex_to_text, int_to_hex, process_repeating_xor
 from exercises.set_2 import encrypt_aes128_cbc, decrypt_aes128_cbc, kv_parser, find_key_block_size, cbc_find_prefix_len
 from exercises.set_3 import ctr_stream
 from exercises.utils import gen_aes_key, str_to_chunks
@@ -230,7 +230,7 @@ class Sha1Oracle:
         return self.sha1(message) == hashed_message
 
 
-def _forge_initial_variables(hashed_message: str) -> Tuple[int, int, int, int, int]:
+def _forge_initial_variables_sha1(hashed_message: str) -> Tuple[int, int, int, int, int]:
     hashed_int = hex_to_int(hashed_message)
     a = hashed_int >> 128
     b = (hashed_int >> 96) & 0xFFFFFFFF
@@ -244,8 +244,7 @@ def length_extension_attack_mac_sha1(
     oracle: Sha1Oracle, message: str, hashed_message: str, new_message: str, max_key_len: int = 100
 ) -> Tuple[str, str]:
     message_bytes = message.encode(DEFAULT_ENCODING)
-    preprocessed_message = _sha1_preprocess(message_bytes)
-    a, b, c, d, e = _forge_initial_variables(hashed_message)
+    a, b, c, d, e = _forge_initial_variables_sha1(hashed_message)
     new_message_bytes = new_message.encode(DEFAULT_ENCODING)
 
     for key_len in range(100):
@@ -259,6 +258,7 @@ def length_extension_attack_mac_sha1(
     raise ValueError("No match found")
 
 
+### Challenge 30
 # Pseudocode from: https://datatracker.ietf.org/doc/html/rfc1320
 def _md4_preprocess(m: bytes, l: Optional[int] = None) -> bytes:
     original_bit_message_length = l
@@ -362,3 +362,41 @@ def md4(
         word_d = (word_d + word_dd) & 0xFFFFFFFF
 
     return struct.pack("<4I", word_a, word_b, word_c, word_d).hex()
+
+
+def md4_with_mac(s: str, mac: str) -> str:
+    return md4(mac + s)
+
+
+class Md4Oracle:
+    def __init__(self) -> None:
+        with open("/usr/share/dict/words") as dictionary:
+            self._mac = choice(dictionary.readlines()).strip()
+
+    def md4(self, s: str) -> str:
+        return md4_with_mac(s, self._mac)
+
+    def validate(self, message: str, hashed_message: str) -> bool:
+        return self.md4(message) == hashed_message
+
+
+def _forge_initial_variables_md4(hashed_message: str) -> Tuple[int, int, int, int, int]:
+    return struct.unpack("<4I", hex_to_text(hashed_message).encode(DEFAULT_ENCODING))
+
+
+def length_extension_attack_mac_md4(
+    oracle: Md4Oracle, message: str, hashed_message: str, new_message: str, max_key_len: int = 100
+) -> Tuple[str, str]:
+    message_bytes = message.encode(DEFAULT_ENCODING)
+    a, b, c, d = _forge_initial_variables_md4(hashed_message)
+    new_message_bytes = new_message.encode(DEFAULT_ENCODING)
+
+    for key_len in range(100):
+        fake_message = (_md4_preprocess(b"A" * key_len + message_bytes)[key_len:] + new_message_bytes).decode(
+            DEFAULT_ENCODING
+        )
+        fake_hash = md4(new_message, a, b, c, d, (key_len + len(fake_message)) * 8)
+        if oracle.validate(fake_message, fake_hash):
+            return fake_message, fake_hash
+
+    raise ValueError("No match found")

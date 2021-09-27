@@ -7,15 +7,17 @@ from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import decode_base64_to_aes128_ecb
 from exercises.set_4 import (
     AesCtrOracle,
+    CbcIvKeyProfileOracle,
     crack_aes_ctr_oracle,
     CtrProfileOracle,
     hack_admin_ctr,
     hack_cbc_iv_key_oracle,
-    CbcIvKeyProfileOracle,
-    sha1_with_mac,
-    Sha1Oracle,
+    length_extension_attack_mac_md4,
     length_extension_attack_mac_sha1,
     md4,
+    Md4Oracle,
+    sha1_with_mac,
+    Sha1Oracle,
 )
 
 
@@ -84,3 +86,13 @@ def test_length_extension_attack_mac_sha1(execution_number: int) -> None:
 )
 def test_md4(given: str, expected: str) -> None:
     assert md4(given) == expected
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_length_extension_attack_mac_md4(execution_number: int) -> None:
+    oracle = Md4Oracle()
+    message = "comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon"
+    new_message = ";admin=true"
+    hashed_message = oracle.md4(message)
+    fake_message, fake_hash = length_extension_attack_mac_md4(oracle, message, hashed_message, new_message)
+    assert fake_message.endswith(new_message)
