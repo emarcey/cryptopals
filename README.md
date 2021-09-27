@@ -24,9 +24,12 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 * [SHA-1](https://en.wikipedia.org/wiki/SHA-1)
 * [Circular Shifts (left rotate)](https://en.wikipedia.org/wiki/Circular_shift)
 * [HMAC](https://en.wikipedia.org/wiki/HMAC)
+* [Diffie-Helman](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange)
+* [Modular Exponentiation](https://en.wikipedia.org/wiki/Modular_exponentiation)
 
 ## Reference Material
 
 * [ASCII character table](https://www.asciitable.com/)
 * [Bae64 Table](https://en.wikipedia.org/wiki/Base64#Base64_table)
 * [MD4 Algo](https://datatracker.ietf.org/doc/html/rfc1320)
+* [Mode Exp implementation](https://rosettacode.org/wiki/Modular_exponentiation#Python)

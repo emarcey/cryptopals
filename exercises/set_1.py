@@ -351,9 +351,12 @@ def decrypt_b64_repeating_xor(b64_s: str) -> Tuple[str, str]:
 
 
 ### Challenge 7
-def decrypt_aes128_ecb(s: str, key: str) -> str:
+def decrypt_aes128_ecb(s: str, key: str, should_unpad: bool = True) -> str:
     cipher = AES.new(key, AES.MODE_ECB)
-    return pkcs7_unpad(cipher.decrypt(s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING))
+    decrypted = cipher.decrypt(s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
+    if should_unpad:
+        decrypted = pkcs7_unpad(decrypted)
+    return decrypted
 
 
 def encrypt_aes128_ecb(s: str, key: str) -> str:

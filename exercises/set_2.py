@@ -18,7 +18,7 @@ def encrypt_aes128_cbc(s: str, key: str, iv: str) -> str:
     return "".join(results)
 
 
-def decrypt_aes128_cbc(s: str, key: str, iv: str) -> str:
+def decrypt_aes128_cbc(s: str, key: str, iv: str, should_unpad: bool = True) -> str:
     results = []
     for chunk in str_to_chunks(s, BLOCK_SIZE, -1, True):
         decrypted_chunk = decrypt_aes128_ecb(chunk, key)
