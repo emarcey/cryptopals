@@ -1,7 +1,7 @@
 import pytest
 from secrets import choice, randbelow, token_bytes
 
-from exercises.const import DEFAULT_ENCODING
+from exercises.const import DEFAULT_ENCODING, STARTER_SAFE_PRIMES
 from exercises.set_5 import (
     _g_equals_1,
     _g_equals_p,
@@ -10,7 +10,11 @@ from exercises.set_5 import (
     diffie_helman_mitm_attack,
     diffie_helman_mitm_attack_adj_g,
     DiffieHelmanBot,
+    SrpServer,
+    SrpClient,
+    srp,
 )
+from exercises.utils import gen_aes_key
 
 
 @pytest.mark.parametrize(
@@ -61,3 +65,13 @@ def test_diffie_helman_mitm_attack_adj_g(execution_number: int) -> None:
     message = "Hi, how are you?"
     f = choice([_g_equals_p, _g_equals_1, _g_equals_p_minus_1])
     diffie_helman_mitm_attack_adj_g(bot_a, bot_b, f, message)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_srp(execution_number: int) -> None:
+    i = "evanmarcey@gmail.com"
+    p = gen_aes_key().decode(DEFAULT_ENCODING)
+    n = choice(STARTER_SAFE_PRIMES)
+    client = SrpClient(i, p, n)
+    server = SrpServer(i, p, n)
+    srp(client, server)
