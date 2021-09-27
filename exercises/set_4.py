@@ -1,9 +1,10 @@
-from secrets import choice, randbelow
+from secrets import choice, randbelow, token_bytes
 import struct
+from time import sleep, time
 from typing import Dict, List, Optional, Tuple
 
 from exercises.const import DEFAULT_ENCODING
-from exercises.set_1 import hex_to_int, hex_to_text, int_to_hex, process_repeating_xor
+from exercises.set_1 import HEX_CHARS, hex_to_int, hex_to_text, int_to_hex, text_to_hex, process_repeating_xor
 from exercises.set_2 import encrypt_aes128_cbc, decrypt_aes128_cbc, kv_parser, find_key_block_size, cbc_find_prefix_len
 from exercises.set_3 import ctr_stream
 from exercises.utils import gen_aes_key, str_to_chunks
@@ -400,3 +401,75 @@ def length_extension_attack_mac_md4(
             return fake_message, fake_hash
 
     raise ValueError("No match found")
+
+
+### Challenge 31
+def hmac_sha1(key: str, message: str) -> str:
+    block_size = 64
+    output_size = 20
+
+    if len(key) > block_size:
+        key = hex_to_text(sha1(key))
+
+    if len(key) < 64:
+        key += "\x00" * (64 - len(key))
+
+    o_key_pad = process_repeating_xor("\x5c" * 64, key)
+    i_key_pad = process_repeating_xor("\x36" * 64, key)
+
+    return sha1(o_key_pad + hex_to_text(sha1(i_key_pad + message)))
+
+
+class HmacSha1Oracle:
+    # not doing it as a server bc I don't feel like it
+
+    def __init__(self, sleep_s: float = 0.005) -> None:
+        self._key = token_bytes(randbelow(256) + 8).decode(DEFAULT_ENCODING)
+        self._sleep_s = sleep_s
+
+    def hash(self, message: str) -> str:
+        return hmac_sha1(self._key, message)
+
+    def _insecure_compare(self, s1: str, s2: str) -> bool:
+        for i in range(len(s1)):
+            if s1[i] != s2[i]:
+                return False
+            sleep(self._sleep_s)
+
+        return True
+
+    def validate(self, file: str, signature: str) -> bool:
+        new_hash = self.hash(file)
+        return self._insecure_compare(new_hash, signature)
+
+
+HMAC_HEX_LEN = 40
+
+
+def _guess_val(oracle: HmacSha1Oracle, raw_message: str, curr_message: str, rounds: int = 10) -> str:
+    times = {}
+    suffix_len = HMAC_HEX_LEN - len(curr_message) - 1
+    for _ in range(rounds):
+        for new_char in HEX_CHARS:
+            new_message = curr_message + new_char + "\x00" * suffix_len
+            start_time = time()
+            oracle.validate(raw_message, new_message)
+            end_time = time()
+            if new_char not in times:
+                times[new_char] = []
+            times[new_char].append(end_time - start_time)
+
+    calc_times = []
+    for k, v in times.items():
+        calc_times.append((k, sum(v) / len(v)))
+
+    return sorted(calc_times, key=lambda x: x[1], reverse=True)[0][0]
+
+
+### Challenge 32 - just add additional rounds, try 10 or so
+def hmac_sha1_timing_hack(oracle: HmacSha1Oracle, raw_message: str, num_rounds: int) -> str:
+    curr_string = ""
+    for _ in range(HMAC_HEX_LEN):
+        curr_string += _guess_val(oracle, raw_message, curr_string, num_rounds)
+
+    return curr_string

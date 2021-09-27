@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import os
 import pytest
 from secrets import randbelow, token_bytes
@@ -12,12 +13,15 @@ from exercises.set_4 import (
     CtrProfileOracle,
     hack_admin_ctr,
     hack_cbc_iv_key_oracle,
+    hmac_sha1,
+    HmacSha1Oracle,
     length_extension_attack_mac_md4,
     length_extension_attack_mac_sha1,
     md4,
     Md4Oracle,
     sha1_with_mac,
     Sha1Oracle,
+    hmac_sha1_timing_hack,
 )
 
 
@@ -96,3 +100,43 @@ def test_length_extension_attack_mac_md4(execution_number: int) -> None:
     hashed_message = oracle.md4(message)
     fake_message, fake_hash = length_extension_attack_mac_md4(oracle, message, hashed_message, new_message)
     assert fake_message.endswith(new_message)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hmac_sha1(execution_number: int) -> None:
+    key = token_bytes(randbelow(256) + 8)
+    message = token_bytes(randbelow(256) + 32)
+    print(key)
+    print(message)
+    assert (
+        hmac_sha1(key.decode(DEFAULT_ENCODING), message.decode(DEFAULT_ENCODING))
+        == hmac.new(key, message, hashlib.sha1).hexdigest()
+    )
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hmac_sha1_oracle_true(execution_number: int) -> None:
+    oracle = HmacSha1Oracle()
+    message = token_bytes(randbelow(256) + 32).decode(DEFAULT_ENCODING)
+
+    message_hash = oracle.hash(message)
+    assert oracle.validate(message, message_hash)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_hmac_sha1_oracle_false(execution_number: int) -> None:
+    oracle = HmacSha1Oracle()
+    message1 = token_bytes(randbelow(256) + 32).decode(DEFAULT_ENCODING)
+    message_hash1 = oracle.hash(message1)
+    message2 = token_bytes(randbelow(256) + 32).decode(DEFAULT_ENCODING)
+    message_hash2 = oracle.hash(message2)
+    assert not oracle.validate(message1, message_hash2)
+
+
+@pytest.mark.skip(reason="this thing is so slow")
+@pytest.mark.parametrize("execution_number", range(1))
+def test_hmac_sha1_timing_hack(execution_number: int) -> None:
+    oracle = HmacSha1Oracle()
+    raw_message = token_bytes(randbelow(256) + 32).decode(DEFAULT_ENCODING)
+    hashed_message = oracle.hash(raw_message)
+    assert hmac_sha1_timing_hack(oracle, raw_message, 5) == hashed_message

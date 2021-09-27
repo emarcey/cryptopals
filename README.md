@@ -23,6 +23,7 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 * [Base64 for encryption/decryption](https://en.wikipedia.org/wiki/Base64)
 * [SHA-1](https://en.wikipedia.org/wiki/SHA-1)
 * [Circular Shifts (left rotate)](https://en.wikipedia.org/wiki/Circular_shift)
+* [HMAC](https://en.wikipedia.org/wiki/HMAC)
 
 ## Reference Material
 
