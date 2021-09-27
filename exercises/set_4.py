@@ -467,9 +467,12 @@ def _guess_val(oracle: HmacSha1Oracle, raw_message: str, curr_message: str, roun
 
 
 ### Challenge 32 - just add additional rounds, try 10 or so
-def hmac_sha1_timing_hack(oracle: HmacSha1Oracle, raw_message: str, num_rounds: int) -> str:
+# max_len is to do partials for testing faster
+def hmac_sha1_timing_hack(
+    oracle: HmacSha1Oracle, raw_message: str, num_rounds: int, max_len: int = HMAC_HEX_LEN
+) -> str:
     curr_string = ""
-    for _ in range(HMAC_HEX_LEN):
+    for _ in range(max_len):
         curr_string += _guess_val(oracle, raw_message, curr_string, num_rounds)
 
     return curr_string

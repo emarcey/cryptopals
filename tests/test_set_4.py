@@ -133,10 +133,10 @@ def test_hmac_sha1_oracle_false(execution_number: int) -> None:
     assert not oracle.validate(message1, message_hash2)
 
 
-@pytest.mark.skip(reason="this thing is so slow")
-@pytest.mark.parametrize("execution_number", range(1))
-def test_hmac_sha1_timing_hack(execution_number: int) -> None:
-    oracle = HmacSha1Oracle()
+@pytest.mark.parametrize("sleep_time, num_rounds", [(0.005, 3), (0.0005, 10)])
+def test_hmac_sha1_timing_hack(sleep_time: float, num_rounds: int) -> None:
+    oracle = HmacSha1Oracle(sleep_time)
     raw_message = token_bytes(randbelow(256) + 32).decode(DEFAULT_ENCODING)
     hashed_message = oracle.hash(raw_message)
-    assert hmac_sha1_timing_hack(oracle, raw_message, 5) == hashed_message
+    max_len = 10
+    assert hmac_sha1_timing_hack(oracle, raw_message, num_rounds, max_len) == hashed_message[:max_len]
