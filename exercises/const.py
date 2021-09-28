@@ -147,3 +147,10 @@ STARTER_SAFE_PRIMES = [
     1823,
     1907,
 ]
+
+
+temp_dict = []
+with open("/usr/share/dict/words") as f:
+    temp_dict = [row.strip() for row in f.readlines()]
+
+SMALL_PASSWORD_DICT = temp_dict[:1000]

@@ -1,7 +1,7 @@
 import pytest
 from secrets import choice, randbelow, token_bytes
 
-from exercises.const import DEFAULT_ENCODING, STARTER_SAFE_PRIMES
+from exercises.const import DEFAULT_ENCODING, STARTER_SAFE_PRIMES, SMALL_PASSWORD_DICT
 from exercises.set_5 import (
     _g_equals_1,
     _g_equals_p,
@@ -14,6 +14,10 @@ from exercises.set_5 import (
     srp,
     SrpClient,
     SrpServer,
+    simple_srp,
+    SimpleSrpClient,
+    SimpleSrpServer,
+    simple_srp_dictionary_attack,
 )
 from exercises.utils import gen_aes_key
 
@@ -87,3 +91,24 @@ def test_break_srp(execution_number: int) -> None:
     server = SrpServer(i, p, n)
     a_override = choice([0, n, n * 2])
     break_srp(client, server, a_override)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_simple_srp(execution_number: int) -> None:
+    i = "evanmarcey@gmail.com"
+    p = gen_aes_key().decode(DEFAULT_ENCODING)
+    n = choice(STARTER_SAFE_PRIMES)
+    client = SimpleSrpClient(i, p, n)
+    server = SimpleSrpServer(i, n)
+    simple_srp(client, server)
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_simple_srp_dictionary_attack(execution_number: int) -> None:
+    p = choice(SMALL_PASSWORD_DICT)
+    i = "evanmarcey@gmail.com"
+    n = choice(STARTER_SAFE_PRIMES)
+
+    client = SimpleSrpClient(i, p, n)
+    server = SimpleSrpServer(i, n)
+    assert p in simple_srp_dictionary_attack(client, server)

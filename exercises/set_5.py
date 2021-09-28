@@ -2,7 +2,7 @@ import hashlib
 from secrets import randbelow
 from typing import Callable, List, Optional, Tuple
 
-from exercises.const import DEFAULT_ENCODING
+from exercises.const import DEFAULT_ENCODING, SMALL_PASSWORD_DICT
 from exercises.set_1 import hex_to_text, process_repeating_xor
 from exercises.set_2 import decrypt_aes128_cbc, encrypt_aes128_cbc
 from exercises.set_4 import sha1
@@ -154,12 +154,12 @@ class SrpClient:
         self._s = s
         self.B = B
         uH = hashlib.sha256((str(self.A) + str(self.B)).encode(DEFAULT_ENCODING)).hexdigest()
-        self.u = int(uH, 16)
+        self._u = int(uH, 16)
 
     def generate_k(self) -> None:
         xH = hashlib.sha256((str(self._s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
-        S = _mod_exp(self.B - self._k * _mod_exp(self._g, x, self._n), self._a + self.u * x, self._n)
+        S = _mod_exp(self.B - self._k * _mod_exp(self._g, x, self._n), self._a + self._u * x, self._n)
         self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
@@ -232,3 +232,99 @@ def break_srp(client: SrpClient, server: SrpServer, a_override: int):
     if not server.validate_hmac(fake_hmac):
         raise ValueError("Server unable to validate Client HMAC")
     return
+
+
+### Challenge 38
+class SimpleSrpClient:
+    def __init__(self, i: str, p: str, n: int, g: int = 2, k: int = 3):
+        self._i = i
+        self._p = p
+        self._n = n
+        self._g = g
+        self._k = k
+
+    def generate_a(self) -> Tuple[str, str, int]:
+        self._a = randbelow(self._n)
+        self.A = _mod_exp(self._g, self._a, self._n)
+        return self._i, self._p, self.A
+
+    def generate_k(self, s: int, u: int, B: int) -> None:
+        self._s = s
+        self._u = u
+        self.B = B
+        xH = hashlib.sha256((str(self._s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
+        x = int(xH, 16)
+        S = _mod_exp(self.B, self._a + self._u * x, self._n)
+        self.S = S
+        self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+
+    def generate_hmac(self) -> str:
+        return hmac_sha256(self.K, str(self._s).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+
+
+class SimpleSrpServer:
+    def __init__(self, i: str, n: int, g: int = 2, k: int = 3):
+        self._i = i
+        self._n = n
+        self._g = g
+        self._k = k
+
+    def _gen_password_verifier(self, p: str):
+        s = randbelow(64)
+        xH = hashlib.sha256((str(s) + p).encode(DEFAULT_ENCODING)).hexdigest()
+        x = int(xH, 16)
+        v = _mod_exp(self._g, x, self._n)
+        self._s = s
+        self._v = v
+
+    def generate_b(self, i: str, p: str, A: int) -> Tuple[int, int, int]:
+        self._gen_password_verifier(p)
+        self.A = A
+        self._b = randbelow(self._n)
+        self.B = _mod_exp(self._g, self._b, self._n)
+        self._u = randbelow(2 ** 128)
+        return self._s, self.B, self._u
+
+    def generate_k(self) -> None:
+        S = _mod_exp(self.A * _mod_exp(self._v, self._u, self._n), self._b, self._n)
+        self.S = S
+        self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+
+    def validate_hmac(self, client_hmac: str) -> bool:
+        server_hmac = hmac_sha256(self.K, str(self._s).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+        return server_hmac == client_hmac
+
+
+def simple_srp(client: SimpleSrpClient, server: SimpleSrpServer):
+    i, p, A = client.generate_a()
+    s, B, u = server.generate_b(i, p, A)
+    client.generate_k(s, u, B)
+    server.generate_k()
+    client_hmac = client.generate_hmac()
+    if not server.validate_hmac(client_hmac):
+        raise ValueError("Server unable to validate Client HMAC")
+    return
+
+
+def simple_srp_dictionary_attack(client: SrpClient, server: SrpServer) -> List[str]:
+    i, p, A = client.generate_a()
+    s, B, u = server.generate_b(i, p, A)
+    client.generate_k(s, u, B)
+    server.generate_k()
+    client_hmac = client.generate_hmac()
+
+    valid_candidates = []
+    for candidate in SMALL_PASSWORD_DICT:
+        forged_xH = hashlib.sha256((str(s) + candidate).encode(DEFAULT_ENCODING)).hexdigest()
+        forged_x = int(forged_xH, 16)
+        forged_v = _mod_exp(server._g, forged_x, server._n)
+        forged_S = _mod_exp(A * _mod_exp(forged_v, u, server._n), server._b, server._n)
+        forged_K = hashlib.sha256(str(forged_S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+        forged_hmac = hmac_sha256(forged_K, str(s).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
+        if client_hmac == forged_hmac and server.validate_hmac(forged_hmac):
+            valid_candidates.append(candidate)
+
+    if not valid_candidates:
+        raise ValueError("Could not find a password candidate")
+
+    return valid_candidates
