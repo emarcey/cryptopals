@@ -12,7 +12,7 @@ from exercises.utils import gen_aes_key, pkcs7_unpad
 # Challenge 33
 # https://rosettacode.org/wiki/Modular_exponentiation#Python
 # https://en.wikipedia.org/wiki/Modular_exponentiation
-def _mod_exp(b: int, e: int, m: int) -> int:
+def mod_exp(b: int, e: int, m: int) -> int:
     x = 1
     b = b % m
     while e > 0:
@@ -25,11 +25,11 @@ def _mod_exp(b: int, e: int, m: int) -> int:
 
 def diffie_helman(p: int = 37, g: int = 5) -> Tuple[str, str, str]:
     a = randbelow(p)
-    public_A = _mod_exp(g, a, p)
+    public_A = mod_exp(g, a, p)
     b = randbelow(p)
-    public_B = _mod_exp(g, b, p)
-    private_key = _mod_exp(public_B, a, p)
-    private_key2 = _mod_exp(public_A, b, p)
+    public_B = mod_exp(g, b, p)
+    private_key = mod_exp(public_B, a, p)
+    private_key2 = mod_exp(public_A, b, p)
     if private_key != private_key2:
         raise ValueError("Something went wrong")
 
@@ -46,11 +46,11 @@ class DiffieHelmanBot:
         self._private_key_hash = None
 
     def get_public_key(self) -> int:
-        return _mod_exp(self._g, self._a, self._p)
+        return mod_exp(self._g, self._a, self._p)
 
     def get_private_key(self, public_key: int) -> str:
         if not self._private_key:
-            self._private_key = _mod_exp(public_key, self._a, self._p)
+            self._private_key = mod_exp(public_key, self._a, self._p)
             self._private_key_hash = hex_to_text(sha1(str(self._private_key)))[:16]
         return self._private_key
 
@@ -148,7 +148,7 @@ class SrpClient:
 
     def generate_a(self) -> Tuple[str, int]:
         self._a = randbelow(self._n)
-        self.A = _mod_exp(self._g, self._a, self._n)
+        self.A = mod_exp(self._g, self._a, self._n)
         return self._i, self.A
 
     def calculate_u(self, s: int, B: int) -> None:
@@ -160,7 +160,7 @@ class SrpClient:
     def generate_k(self) -> None:
         xH = hashlib.sha256((str(self._s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
-        S = _mod_exp(self.B - self._k * _mod_exp(self._g, x, self._n), self._a + self._u * x, self._n)
+        S = mod_exp(self.B - self._k * mod_exp(self._g, x, self._n), self._a + self._u * x, self._n)
         self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
@@ -182,14 +182,14 @@ class SrpServer:
         s = randbelow(64)
         xH = hashlib.sha256((str(s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
-        v = _mod_exp(self._g, x, self._n)
+        v = mod_exp(self._g, x, self._n)
         self._s = s
         self._v = v
 
     def generate_b(self, i: str, A: int) -> Tuple[int, int]:
         self.A = A
         self._b = randbelow(self._n)
-        self.B = self._k * self._v + _mod_exp(self._g, self._b, self._n)
+        self.B = self._k * self._v + mod_exp(self._g, self._b, self._n)
         return self._s, self.B
 
     def calculate_u(self) -> None:
@@ -197,7 +197,7 @@ class SrpServer:
         self._u = int(uH, 16)
 
     def generate_k(self) -> None:
-        S = _mod_exp(self.A * _mod_exp(self._v, self._u, self._n), self._b, self._n)
+        S = mod_exp(self.A * mod_exp(self._v, self._u, self._n), self._b, self._n)
         self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
@@ -246,7 +246,7 @@ class SimpleSrpClient:
 
     def generate_a(self) -> Tuple[str, str, int]:
         self._a = randbelow(self._n)
-        self.A = _mod_exp(self._g, self._a, self._n)
+        self.A = mod_exp(self._g, self._a, self._n)
         return self._i, self._p, self.A
 
     def generate_k(self, s: int, u: int, B: int) -> None:
@@ -255,7 +255,7 @@ class SimpleSrpClient:
         self.B = B
         xH = hashlib.sha256((str(self._s) + self._p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
-        S = _mod_exp(self.B, self._a + self._u * x, self._n)
+        S = mod_exp(self.B, self._a + self._u * x, self._n)
         self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
@@ -274,7 +274,7 @@ class SimpleSrpServer:
         s = randbelow(64)
         xH = hashlib.sha256((str(s) + p).encode(DEFAULT_ENCODING)).hexdigest()
         x = int(xH, 16)
-        v = _mod_exp(self._g, x, self._n)
+        v = mod_exp(self._g, x, self._n)
         self._s = s
         self._v = v
 
@@ -282,12 +282,12 @@ class SimpleSrpServer:
         self._gen_password_verifier(p)
         self.A = A
         self._b = randbelow(self._n)
-        self.B = _mod_exp(self._g, self._b, self._n)
+        self.B = mod_exp(self._g, self._b, self._n)
         self._u = randbelow(2 ** 128)
         return self._s, self.B, self._u
 
     def generate_k(self) -> None:
-        S = _mod_exp(self.A * _mod_exp(self._v, self._u, self._n), self._b, self._n)
+        S = mod_exp(self.A * mod_exp(self._v, self._u, self._n), self._b, self._n)
         self.S = S
         self.K = hashlib.sha256(str(S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
 
@@ -318,8 +318,8 @@ def simple_srp_dictionary_attack(client: SrpClient, server: SrpServer) -> List[s
     for candidate in SMALL_PASSWORD_DICT:
         forged_xH = hashlib.sha256((str(s) + candidate).encode(DEFAULT_ENCODING)).hexdigest()
         forged_x = int(forged_xH, 16)
-        forged_v = _mod_exp(server._g, forged_x, server._n)
-        forged_S = _mod_exp(A * _mod_exp(forged_v, u, server._n), server._b, server._n)
+        forged_v = mod_exp(server._g, forged_x, server._n)
+        forged_S = mod_exp(A * mod_exp(forged_v, u, server._n), server._b, server._n)
         forged_K = hashlib.sha256(str(forged_S).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
         forged_hmac = hmac_sha256(forged_K, str(s).encode(DEFAULT_ENCODING)).digest().decode(DEFAULT_ENCODING)
         if client_hmac == forged_hmac and server.validate_hmac(forged_hmac):
@@ -366,13 +366,18 @@ def invmod(a: int, b: int) -> int:
     return u % b
 
 
+def lcm(a, b):
+    """Computes the lowest common multiple between a and b using the GCD method."""
+    return a // extended_gcd(a, b)[0] * b
+
+
 def rsa(e: int = 3, prime_length: int = 16) -> Tuple[RsaKey, RsaKey]:
     et = 0
     while extended_gcd(e, et)[0] != 1:
         p = getPrime(prime_length)
         q = getPrime(prime_length)
         n = p * q
-        et = (p - 1) * (q - 1)
+        et = lcm(p - 1, q - 1)
 
     d = invmod(e, et)
     public = RsaKey(e, n)
@@ -381,11 +386,11 @@ def rsa(e: int = 3, prime_length: int = 16) -> Tuple[RsaKey, RsaKey]:
 
 
 def encrypt_rsa_int(m: int, e: int, n: int) -> int:
-    return _mod_exp(m, e, n)
+    return mod_exp(m, e, n)
 
 
 def decrypt_rsa_int(c: int, d: int, n: int) -> int:
-    return _mod_exp(c, d, n)
+    return mod_exp(c, d, n)
 
 
 def encrypt_rsa(m: str, k: RsaKey) -> int:
