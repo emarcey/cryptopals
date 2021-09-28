@@ -396,3 +396,39 @@ def encrypt_rsa(m: str, k: RsaKey) -> int:
 def decrypt_rsa(c: int, k: RsaKey) -> int:
     m_int = decrypt_rsa_int(c, k.v, k.n)
     return hex_to_text(int_to_hex(m_int))
+
+
+### Challenge 40
+def find_n_root(x: int, n: int) -> int:
+    # https://stackoverflow.com/q/55436001
+    high = 1
+    while high ** n < x:
+        high *= 2
+
+    low = high // 2
+    while low < high:
+        mid = (low + high) // 2
+        if low < mid and mid ** n < x:
+            low = mid
+        elif high > mid and mid ** n > x:
+            high = mid
+        else:
+            return mid
+
+    return mid + 1
+
+
+def hack_rsa(messages: List[Tuple[str, RsaKey]]) -> str:
+    if len(messages) != 3:
+        raise ValueError(f"Invalid number of messages: {len(messages)}. Expected: 3")
+
+    product_n = 1
+    for message in messages:
+        product_n *= message[1].n
+
+    total = 0
+    for message in messages:
+        m_s = product_n // message[1].n
+        total += message[0] * m_s * invmod(m_s, message[1].n)
+
+    return hex_to_text(int_to_hex(find_n_root(total % product_n, 3)))

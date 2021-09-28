@@ -23,6 +23,7 @@ from exercises.set_5 import (
     encrypt_rsa_int,
     decrypt_rsa_int,
     encrypt_rsa,
+    hack_rsa,
     decrypt_rsa,
 )
 from exercises.utils import gen_aes_key
@@ -133,3 +134,15 @@ def test_rsa(execution_number: int) -> None:
     m = "Hello"
     public_key, private_key = rsa(prime_length=1024)
     assert decrypt_rsa(encrypt_rsa(m, public_key), private_key) == m
+
+
+@pytest.mark.parametrize("execution_number", range(5))
+def test_hack_rsa(execution_number: int) -> None:
+    messages = []
+    m = token_bytes(randbelow(128) + 16).decode(DEFAULT_ENCODING)
+    for i in range(3):
+        public_key, private_key = rsa(prime_length=1024)
+        c = encrypt_rsa(m, public_key)
+        messages.append((c, public_key))
+
+    assert hack_rsa(messages) == m
