@@ -332,6 +332,12 @@ def simple_srp_dictionary_attack(client: SrpClient, server: SrpServer) -> List[s
 
 
 ### Challenge 39
+class RsaKey:
+    def __init__(self, v: int, n: int):
+        self.v = v
+        self.n = n
+
+
 def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
     r1 = a
     r2 = b
@@ -360,7 +366,7 @@ def invmod(a: int, b: int) -> int:
     return u % b
 
 
-def rsa(e: int = 3, prime_length: int = 16) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+def rsa(e: int = 3, prime_length: int = 16) -> Tuple[RsaKey, RsaKey]:
     et = 0
     while extended_gcd(e, et)[0] != 1:
         p = getPrime(prime_length)
@@ -369,14 +375,8 @@ def rsa(e: int = 3, prime_length: int = 16) -> Tuple[Tuple[int, int], Tuple[int,
         et = (p - 1) * (q - 1)
 
     d = invmod(e, et)
-    public = (
-        e,
-        n,
-    )
-    private = (
-        d,
-        n,
-    )
+    public = RsaKey(e, n)
+    private = RsaKey(d, n)
     return public, private
 
 
@@ -388,11 +388,11 @@ def decrypt_rsa_int(c: int, d: int, n: int) -> int:
     return _mod_exp(c, d, n)
 
 
-def encrypt_rsa(m: str, e: int, n: int) -> int:
+def encrypt_rsa(m: str, k: RsaKey) -> int:
     m_int = hex_to_int(text_to_hex(m))
-    return encrypt_rsa_int(m_int, e, n)
+    return encrypt_rsa_int(m_int, k.v, k.n)
 
 
-def decrypt_rsa(c: int, d: int, n: int) -> int:
-    m_int = decrypt_rsa_int(c, d, n)
+def decrypt_rsa(c: int, k: RsaKey) -> int:
+    m_int = decrypt_rsa_int(c, k.v, k.n)
     return hex_to_text(int_to_hex(m_int))

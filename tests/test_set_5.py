@@ -132,4 +132,4 @@ def test_invmod(given_a: int, given_b: int, expected: int) -> None:
 def test_rsa(execution_number: int) -> None:
     m = "Hello"
     public_key, private_key = rsa(prime_length=1024)
-    assert decrypt_rsa(encrypt_rsa(m, public_key[0], public_key[1]), private_key[0], private_key[1]) == m
+    assert decrypt_rsa(encrypt_rsa(m, public_key), private_key) == m
