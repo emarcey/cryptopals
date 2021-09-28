@@ -11,6 +11,7 @@ from exercises.set_5 import (
     diffie_helman_mitm_attack,
     diffie_helman_mitm_attack_adj_g,
     DiffieHelmanBot,
+    invmod,
     srp,
     SrpClient,
     SrpServer,
@@ -18,6 +19,11 @@ from exercises.set_5 import (
     SimpleSrpClient,
     SimpleSrpServer,
     simple_srp_dictionary_attack,
+    rsa,
+    encrypt_rsa_int,
+    decrypt_rsa_int,
+    encrypt_rsa,
+    decrypt_rsa,
 )
 from exercises.utils import gen_aes_key
 
@@ -112,3 +118,18 @@ def test_simple_srp_dictionary_attack(execution_number: int) -> None:
     client = SimpleSrpClient(i, p, n)
     server = SimpleSrpServer(i, n)
     assert p in simple_srp_dictionary_attack(client, server)
+
+
+@pytest.mark.parametrize(
+    "given_a, given_b, expected",
+    [(123, 4567, 854), (854, 4567, 123), (0, 1, 0), (1, 2, 1), (11, 6, 5), (5, 6, 5), (17, 3120, 2753)],
+)
+def test_invmod(given_a: int, given_b: int, expected: int) -> None:
+    assert invmod(given_a, given_b) == expected
+
+
+@pytest.mark.parametrize("execution_number", range(10))
+def test_rsa(execution_number: int) -> None:
+    m = "Hello"
+    public_key, private_key = rsa(prime_length=1024)
+    assert decrypt_rsa(encrypt_rsa(m, public_key[0], public_key[1]), private_key[0], private_key[1]) == m

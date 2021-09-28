@@ -1,9 +1,10 @@
+from Crypto.Util.number import getPrime
 import hashlib
 from secrets import randbelow
 from typing import Callable, List, Optional, Tuple
 
 from exercises.const import DEFAULT_ENCODING, SMALL_PASSWORD_DICT
-from exercises.set_1 import hex_to_text, process_repeating_xor
+from exercises.set_1 import hex_to_text, process_repeating_xor, int_to_hex, text_to_hex, hex_to_int
 from exercises.set_2 import decrypt_aes128_cbc, encrypt_aes128_cbc
 from exercises.set_4 import sha1
 from exercises.utils import gen_aes_key, pkcs7_unpad
@@ -328,3 +329,70 @@ def simple_srp_dictionary_attack(client: SrpClient, server: SrpServer) -> List[s
         raise ValueError("Could not find a password candidate")
 
     return valid_candidates
+
+
+### Challenge 39
+def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
+    r1 = a
+    r2 = b
+    u1 = 1
+    u2 = 0
+    v1 = 0
+    v2 = 1
+
+    while r2 != 0:
+        q = r1 // r2
+        r3 = r1
+        u3 = u1
+        v3 = v1
+        r1 = r2
+        u1 = u2
+        v1 = v2
+        r2 = r3 - q * r2
+        u2 = u3 - q * u2
+        v2 = v3 - q * v2
+
+    return r1, u1, v1
+
+
+def invmod(a: int, b: int) -> int:
+    r, u, v = extended_gcd(a, b)
+    return u % b
+
+
+def rsa(e: int = 3, prime_length: int = 16) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    et = 0
+    while extended_gcd(e, et)[0] != 1:
+        p = getPrime(prime_length)
+        q = getPrime(prime_length)
+        n = p * q
+        et = (p - 1) * (q - 1)
+
+    d = invmod(e, et)
+    public = (
+        e,
+        n,
+    )
+    private = (
+        d,
+        n,
+    )
+    return public, private
+
+
+def encrypt_rsa_int(m: int, e: int, n: int) -> int:
+    return _mod_exp(m, e, n)
+
+
+def decrypt_rsa_int(c: int, d: int, n: int) -> int:
+    return _mod_exp(c, d, n)
+
+
+def encrypt_rsa(m: str, e: int, n: int) -> int:
+    m_int = hex_to_int(text_to_hex(m))
+    return encrypt_rsa_int(m_int, e, n)
+
+
+def decrypt_rsa(c: int, d: int, n: int) -> int:
+    m_int = decrypt_rsa_int(c, d, n)
+    return hex_to_text(int_to_hex(m_int))
