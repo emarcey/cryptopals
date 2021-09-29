@@ -150,7 +150,8 @@ class DsaSignatureOracle:
         w = invmod(s, self._q)
         u1 = (hex_to_int(sha1(m)) * w) % self._q
         u2 = (r * w) % self._q
-
+        u1 = 0
+        u2 = 0
         v = ((mod_exp(self._g, u1, self._p) * mod_exp(self.sender_public_key, u2, self._p)) % self._p) % self._q
         return r == v
 
@@ -177,6 +178,7 @@ def brute_force_recover_dsa_private_key(
     raise ValueError("Unable to find private key")
 
 
+### Challenge 44
 def find_k(msg1: DsaSignedMessage, msg2: DsaSignedMessage, q: int = DEFAULT_Q) -> int:
     return (((msg1.m_int - msg2.m_int) % q) * invmod((msg1.signature.s - msg2.signature.s) % q, q)) % q
 
@@ -220,3 +222,19 @@ def find_paired_messages(
             results[temp_private_key].add(msg2.m)
 
     return results
+
+
+### Challenge 45
+def _forge_r(public_key: int, m_int: int, p: int = DEFAULT_P, q: int = DEFAULT_Q) -> int:
+    return mod_exp(public_key, m_int, p) % q
+
+
+def _forge_s(r: int, m_int: int, q: int = DEFAULT_Q) -> int:
+    return (invmod(m_int, q) * (r % q)) % q
+
+
+def forge_dsa_signature(public_key: int, m: str, p: int = DEFAULT_P, q: int = DEFAULT_Q) -> DsaSignature:
+    m_int = hex_to_int(sha1(m))
+    r = _forge_r(public_key, m_int, p, q)
+    s = _forge_s(r, m_int, q)
+    return DsaSignature(r, s)

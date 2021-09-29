@@ -13,7 +13,9 @@ from exercises.set_6 import (
     DsaSignatureOracle,
     DsaSignedMessage,
     find_paired_messages,
+    forge_dsa_signature,
     forge_rsa_signature,
+    DEFAULT_P,
     RsaSignatureOracle,
     recover_dsa_private_key,
     unpadded_rsa_oracle_attack,
@@ -116,3 +118,11 @@ def test_find_paired_messages() -> None:
     private_key = list(results)[0]
     assert sha1(int_to_hex(private_key)) == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
     assert len(results[private_key]) == 5
+
+
+@pytest.mark.parametrize("given", [("Hello, world"), ("Goodbye, world")])
+def test_forge_dsa_signature(given: str) -> None:
+    private_key, public_key = dsa(p=DEFAULT_P, g=DEFAULT_P + 1)
+    forged_signature = forge_dsa_signature(public_key, given)
+    oracle = DsaSignatureOracle(private_key, public_key, g=DEFAULT_P + 1)
+    assert oracle.validate(forged_signature, given)
