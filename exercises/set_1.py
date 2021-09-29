@@ -1,5 +1,6 @@
-from typing import List, Tuple
 from Crypto.Cipher import AES
+from typing import List, Tuple, Union
+
 
 from exercises.const import BLOCK_SIZE, DEFAULT_ENCODING
 from exercises.utils import pkcs7_pad, pkcs7_unpad, str_to_chunks
@@ -53,7 +54,8 @@ def _int_to_hex(i: int) -> str:
 def int_to_hex(i: int) -> str:
     if i == 0:
         return "0"
-    return _int_to_hex(i)
+    hex_val = _int_to_hex(i)
+    return hex_val
 
 
 def hex_to_int(h: str) -> str:
@@ -351,7 +353,9 @@ def decrypt_b64_repeating_xor(b64_s: str) -> Tuple[str, str]:
 
 
 ### Challenge 7
-def decrypt_aes128_ecb(s: str, key: str, should_unpad: bool = True) -> str:
+def decrypt_aes128_ecb(s: str, key: Union[str, bytes], should_unpad: bool = True) -> str:
+    if type(key) == str:
+        key = key.encode(DEFAULT_ENCODING)
     cipher = AES.new(key, AES.MODE_ECB)
     decrypted = cipher.decrypt(s.encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
     if should_unpad:
@@ -359,7 +363,9 @@ def decrypt_aes128_ecb(s: str, key: str, should_unpad: bool = True) -> str:
     return decrypted
 
 
-def encrypt_aes128_ecb(s: str, key: str) -> str:
+def encrypt_aes128_ecb(s: str, key: Union[str, bytes]) -> str:
+    if type(key) == str:
+        key = key.encode(DEFAULT_ENCODING)
     cipher = AES.new(key, AES.MODE_ECB)
     len_s = len(s)
     if len(s) % BLOCK_SIZE != 0:

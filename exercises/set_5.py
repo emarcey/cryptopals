@@ -400,27 +400,25 @@ def encrypt_rsa(m: str, k: RsaKey) -> int:
 
 def decrypt_rsa(c: int, k: RsaKey) -> int:
     m_int = decrypt_rsa_int(c, k.v, k.n)
-    return hex_to_text(int_to_hex(m_int))
+    hex_val = int_to_hex(m_int)
+    if len(hex_val) % 2 == 1:
+        hex_val = "0" + hex_val
+    return hex_to_text(hex_val)
 
 
 ### Challenge 40
 def find_n_root(x: int, n: int) -> int:
     # https://stackoverflow.com/q/55436001
-    high = 1
-    while high ** n < x:
-        high *= 2
-
-    low = high // 2
+    low = 0
+    high = x
     while low < high:
         mid = (low + high) // 2
-        if low < mid and mid ** n < x:
-            low = mid
-        elif high > mid and mid ** n > x:
-            high = mid
-        else:
-            return mid
+        if mid ** n < x:
+            low = mid + 1
+            continue
+        high = mid
 
-    return mid + 1
+    return mid
 
 
 def hack_rsa(messages: List[Tuple[str, RsaKey]]) -> str:

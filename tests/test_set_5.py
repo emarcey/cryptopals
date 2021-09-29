@@ -61,7 +61,7 @@ def test_diffie_helman_bot(given_p: int, given_g: int) -> None:
     assert bot1.get_private_key(pub2) == bot2.get_private_key(pub1)
 
 
-@pytest.mark.parametrize("execution_number", range(50))
+@pytest.mark.parametrize("execution_number", range(5))
 def test_diffie_helman_mitm_attack(execution_number: int) -> None:
     bot_a = DiffieHelmanBot()
     bot_b = DiffieHelmanBot()
@@ -70,7 +70,7 @@ def test_diffie_helman_mitm_attack(execution_number: int) -> None:
     diffie_helman_mitm_attack(bot_a, bot_b, message_a, message_b)
 
 
-@pytest.mark.parametrize("execution_number", range(50))
+@pytest.mark.parametrize("execution_number", range(5))
 def test_diffie_helman_mitm_attack_adj_g(execution_number: int) -> None:
     bot_a = DiffieHelmanBot()
     bot_b = DiffieHelmanBot()
@@ -140,6 +140,7 @@ def test_rsa(execution_number: int) -> None:
 def test_hack_rsa(execution_number: int) -> None:
     messages = []
     m = token_bytes(randbelow(128) + 16).decode(DEFAULT_ENCODING)
+    # m = "Hello there"
     for i in range(3):
         public_key, private_key = rsa(prime_length=1024)
         c = encrypt_rsa(m, public_key)

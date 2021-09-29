@@ -30,11 +30,15 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 * [Primes to use for SRP](https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes)
 * [Chinese Remainder Theorem](https://en.wikipedia.org/wiki/Chinese_remainder_theorem)
 
+## RFCs
+
+* [MD4 Algo](https://datatracker.ietf.org/doc/html/rfc1320)
+* [PKCS Standards](https://datatracker.ietf.org/doc/html/rfc3447)
+
 ## Reference Material
 
 * [ASCII character table](https://www.asciitable.com/)
 * [Bae64 Table](https://en.wikipedia.org/wiki/Base64#Base64_table)
-* [MD4 Algo](https://datatracker.ietf.org/doc/html/rfc1320)
 * [Mode Exp implementation](https://rosettacode.org/wiki/Modular_exponentiation#Python)
 * [Extended GCD](https://www.dcode.fr/extended-gcd)
 * [invmod](https://www.dcode.fr/modular-inverse)
