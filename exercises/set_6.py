@@ -2,7 +2,7 @@ import hashlib
 import re
 import time
 from secrets import randbelow
-from typing import Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import hex_to_text, int_to_hex, text_to_hex, hex_to_int
@@ -104,6 +104,13 @@ class DsaSignature:
         self.s = s
 
 
+class DsaSignedMessage:
+    def __init__(self, m: str, r: int, s: int) -> None:
+        self.m = m
+        self.m_int = hex_to_int(sha1(m))
+        self.signature = DsaSignature(r, s)
+
+
 class DsaSignatureOracle:
     def __init__(
         self,
@@ -119,11 +126,13 @@ class DsaSignatureOracle:
         self._q = q
         self._g = g
 
-    def sign(self, m: str) -> DsaSignature:
+    def sign(self, m: str, k_override: int = None) -> DsaSignature:
         r = 0
         s = 0
         while r == 0 or s == 0:
-            k = randbelow(self._q - 1) + 1
+            k = k_override
+            if not k:
+                k = randbelow(self._q - 1) + 1
             self._k = k
             r = mod_exp(self._g, k, self._p) % self._q
             s = (invmod(k, self._q) * (hex_to_int(sha1(m)) + self.private_key * r)) % self._q
@@ -166,3 +175,48 @@ def brute_force_recover_dsa_private_key(
             return private_key
 
     raise ValueError("Unable to find private key")
+
+
+def find_k(msg1: DsaSignedMessage, msg2: DsaSignedMessage, q: int = DEFAULT_Q) -> int:
+    return (((msg1.m_int - msg2.m_int) % q) * invmod((msg1.signature.s - msg2.signature.s) % q, q)) % q
+
+
+def find_shared_private_key(
+    public_key: int,
+    msg1: DsaSignedMessage,
+    msg2: DsaSignedMessage,
+    p: int = DEFAULT_P,
+    q: int = DEFAULT_Q,
+    g: int = DEFAULT_G,
+) -> Optional[int]:
+    temp_k = find_k(msg1, msg2, q)
+    temp_private_key1 = recover_dsa_private_key(msg1.signature, msg1.m, temp_k)
+    temp_private_key2 = recover_dsa_private_key(msg2.signature, msg2.m, temp_k)
+    if mod_exp(g, temp_private_key1, p) == public_key and mod_exp(g, temp_private_key2, p) == public_key:
+        return temp_private_key1
+    return None
+
+
+def find_paired_messages(
+    public_key: int,
+    messages: List[DsaSignedMessage],
+    p: int = DEFAULT_P,
+    q: int = DEFAULT_Q,
+    g: int = DEFAULT_G,
+) -> Dict[int, Set[str]]:
+    num_messages = len(messages)
+    results = {}
+    for i in range(num_messages):
+        for j in range(i + 1, num_messages):
+            msg1 = messages[i]
+            msg2 = messages[j]
+            temp_private_key = find_shared_private_key(public_key, msg1, msg2, p, q, g)
+            if not temp_private_key:
+                continue
+
+            if temp_private_key not in results:
+                results[temp_private_key] = set()
+            results[temp_private_key].add(msg1.m)
+            results[temp_private_key].add(msg2.m)
+
+    return results

@@ -1,3 +1,4 @@
+import os
 import pytest
 from secrets import choice, randbelow, token_bytes
 
@@ -10,12 +11,15 @@ from exercises.set_6 import (
     dsa,
     DsaSignature,
     DsaSignatureOracle,
+    DsaSignedMessage,
+    find_paired_messages,
     forge_rsa_signature,
     RsaSignatureOracle,
     recover_dsa_private_key,
     unpadded_rsa_oracle_attack,
     UnpaddedRsaOracle,
 )
+from exercises.utils import str_to_chunks
 
 
 @pytest.mark.parametrize("execution_number", range(5))
@@ -93,3 +97,22 @@ def test_brute_force_recover_dsa_private_key() -> None:
     m = "For those that envy a MC it can be hazardous to your health\nSo be friendly, a matter of life and death, just like a etch-a-sketch\n"
     private_key = brute_force_recover_dsa_private_key(public_key, signature, m)
     assert sha1(int_to_hex(private_key)) == "0954edd5e0afe5542a4adf012611a91912a3ec16"
+
+
+def test_find_paired_messages() -> None:
+    public_key = 0x2D026F4BF30195EDE3A088DA85E398EF869611D0F68F0713D51C9C1A3A26C95105D915E2D8CDF26D056B86B8A7B85519B1C23CC3ECDC6062650462E3063BD179C2A6581519F674A61F1D89A1FFF27171EBC1B93D4DC57BCEB7AE2430F98A6A4D83D8279EE65D71C1203D2C96D65EBBF7CCE9D32971C3DE5084CCE04A2E147821
+    with open(f"{os.getcwd()}/data/set6_challenge44.txt") as f:
+        texts = [line.strip() for line in f]
+
+    messages = []
+    for chunk in str_to_chunks(texts, 4):
+        msg = chunk[0].strip("msg: ").strip() + " "
+        s = int(chunk[1].strip("s: "))
+        r = int(chunk[2].strip("r: "))
+        messages.append(DsaSignedMessage(msg, r, s))
+
+    results = find_paired_messages(public_key, messages)
+    assert len(results) == 1
+    private_key = list(results)[0]
+    assert sha1(int_to_hex(private_key)) == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
+    assert len(results[private_key]) == 5
