@@ -29,6 +29,7 @@ Because I'm fallible and the internet is infinitely searchable. So if I got too 
 * [SRP](https://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)
 * [Primes to use for SRP](https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes)
 * [Chinese Remainder Theorem](https://en.wikipedia.org/wiki/Chinese_remainder_theorem)
+* [DSA](https://en.wikipedia.org/wiki/Digital_Signature_Algorithm)
 
 ## RFCs
 

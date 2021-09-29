@@ -2,6 +2,7 @@ import hashlib
 import re
 import time
 from secrets import randbelow
+from typing import Tuple
 
 from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import hex_to_text, int_to_hex, text_to_hex, hex_to_int
@@ -83,3 +84,85 @@ def forge_rsa_signature(message: str, key_len: int) -> str:
         hex_val = "0" + hex_val
 
     return hex_to_text(hex_val)
+
+
+### Challenge 43
+DEFAULT_P = 0x800000000000000089E1855218A0E7DAC38136FFAFA72EDA7859F2171E25E65EAC698C1702578B07DC2A1076DA241C76C62D374D8389EA5AEFFD3226A0530CC565F3BF6B50929139EBEAC04F48C3C84AFB796D61E5A4F9A8FDA812AB59494232C7D2B4DEB50AA18EE9E132BFA85AC4374D7F9091ABC3D015EFC871A584471BB1
+DEFAULT_Q = 0xF4F47F05794B256174BBA6E9B396A7707E563C5B
+DEFAULT_G = 0x5958C9D3898B224B12672C0B98E06C60DF923CB8BC999D119458FEF538B8FA4046C8DB53039DB620C094C9FA077EF389B5322A559946A71903F990F1F7E0E025E2D7F7CF494AFF1A0470F5B64C36B625A097F1651FE775323556FE00B3608C887892878480E99041BE601A62166CA6894BDD41A7054EC89F756BA9FC95302291
+
+
+def dsa(p: int = DEFAULT_P, q: int = DEFAULT_Q, g: int = DEFAULT_G) -> Tuple[int, int]:
+    x = randbelow(q - 1) + 1
+    y = mod_exp(g, x, p)
+    return x, y
+
+
+class DsaSignature:
+    def __init__(self, r: int, s: int) -> None:
+        self.r = r
+        self.s = s
+
+
+class DsaSignatureOracle:
+    def __init__(
+        self,
+        private_key: int,
+        sender_public_key: int,
+        p: int = DEFAULT_P,
+        q: int = DEFAULT_Q,
+        g: int = DEFAULT_G,
+    ):
+        self.private_key = private_key
+        self.sender_public_key = sender_public_key
+        self._p = p
+        self._q = q
+        self._g = g
+
+    def sign(self, m: str) -> DsaSignature:
+        r = 0
+        s = 0
+        while r == 0 or s == 0:
+            k = randbelow(self._q - 1) + 1
+            self._k = k
+            r = mod_exp(self._g, k, self._p) % self._q
+            s = (invmod(k, self._q) * (hex_to_int(sha1(m)) + self.private_key * r)) % self._q
+
+        return DsaSignature(r, s)
+
+    def validate(self, signature: DsaSignature, m: str) -> bool:
+        r = signature.r
+        s = signature.s
+        if r <= 0 or r > self._q:
+            return False
+        if s <= 0 or s > self._q:
+            return False
+
+        w = invmod(s, self._q)
+        u1 = (hex_to_int(sha1(m)) * w) % self._q
+        u2 = (r * w) % self._q
+
+        v = ((mod_exp(self._g, u1, self._p) * mod_exp(self.sender_public_key, u2, self._p)) % self._p) % self._q
+        return r == v
+
+
+def recover_dsa_private_key(signature: DsaSignature, m: str, k: int, q: int = DEFAULT_Q) -> int:
+    return (invmod(signature.r, q) * ((signature.s * k) - hex_to_int(sha1(m)))) % q
+
+
+def brute_force_recover_dsa_private_key(
+    public_key: int,
+    signature: DsaSignature,
+    m: str,
+    min_key_val: int = 0,
+    max_key_val: int = 2 ** 16,
+    p: int = DEFAULT_P,
+    q: int = DEFAULT_Q,
+    g: int = DEFAULT_G,
+) -> str:
+    for k in range(min_key_val, max_key_val):
+        private_key = recover_dsa_private_key(signature, m, k, q)
+        if mod_exp(g, private_key, p) == public_key:
+            return private_key
+
+    raise ValueError("Unable to find private key")
