@@ -9,6 +9,7 @@ from exercises.set_5 import rsa, encrypt_rsa
 from exercises.set_6 import (
     brute_force_recover_dsa_private_key,
     decrypt_even_odd_oracle,
+    DEFAULT_P,
     dsa,
     DsaSignature,
     DsaSignatureOracle,
@@ -17,9 +18,10 @@ from exercises.set_6 import (
     find_paired_messages,
     forge_dsa_signature,
     forge_rsa_signature,
-    DEFAULT_P,
-    RsaSignatureOracle,
+    pad_and_encrypt,
+    PaddedRsaOracle,
     recover_dsa_private_key,
+    RsaSignatureOracle,
     unpadded_rsa_oracle_attack,
     UnpaddedRsaOracle,
 )
@@ -138,3 +140,15 @@ def test_decrypt_even_odd_oracle() -> None:
     )
     ciphertext = encrypt_rsa(message, public_key)
     assert decrypt_even_odd_oracle(oracle, ciphertext, public_key) == message
+
+
+@pytest.mark.parametrize("execution_number", range(5))
+def test_padded_rsa_oracle(execution_number: int) -> None:
+    key_len = 256
+    public_key, private_key = rsa(prime_length=key_len // 2)
+    oracle = PaddedRsaOracle(private_key)
+    message = "Hi mom"
+    ciphertext = pad_and_encrypt(message, key_len, public_key)
+    ciphertext2 = encrypt_rsa("message", public_key)
+    assert oracle.validate_padding(ciphertext)
+    assert not oracle.validate_padding(ciphertext2)

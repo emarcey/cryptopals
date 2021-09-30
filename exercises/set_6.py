@@ -3,7 +3,7 @@ import hashlib
 from math import ceil, log
 import re
 import time
-from secrets import randbelow
+from secrets import randbelow, token_bytes
 from typing import Dict, List, Optional, Set, Tuple
 
 from exercises.const import DEFAULT_ENCODING
@@ -276,3 +276,79 @@ def decrypt_even_odd_oracle(oracle: EvenOddRsaOracle, ciphertext: int, public_ke
 
         print(hex_to_text(int_to_hex(upper_bound)))
     return hex_to_text(int_to_hex(upper_bound))
+
+
+### Challenge 47
+class PaddedRsaOracle:
+    def __init__(self, private_key: RsaKey) -> None:
+        self.private_key = private_key
+
+    def validate_padding(self, c: int) -> bool:
+        decrypted = "\x00" + decrypt_rsa(c, self.private_key)
+        return decrypted[:2] == "\x00\x02"
+
+
+def pad_and_encrypt(message: str, key_length_bits: int, public_key: RsaKey) -> int:
+    padding = "".join([chr(randbelow(255) + 1) for i in range(key_length_bits // 8 - len(message) - 3)])
+    padded_message = "\x00\x02" + padding + "\x00" + message
+    return encrypt_rsa(padded_message, public_key)
+
+
+def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphertext: int, public_key: RsaKey) -> str:
+    new_ciphertexts = []
+    ranges = []
+    k = key_len // 8
+    B = 2 ** (8 * (k - 2))
+    e = public_key.v
+    n = public_key.n
+
+    c0 = ciphertext
+    M = [[2 * B, 3 * B - 1]]
+    i = 1
+    # 1. Blinding
+    while not oracle.validate_padding(c0):
+        s = randbelow(n)
+        c0 = (ciphertext * mod_exp(s, e, n)) % n
+
+    # 2. Search for PKCS conforming messages
+    while True:
+        # 2.a.
+        if i == 1:
+            s = n // (3 * B)
+            c1 = 0
+            while not oracle.validate_padding(c1):
+                c1 = (c0 * mod_exp(s, e, n)) % n
+                s += 1
+        elif len(M) > 1:
+            c1 = 0
+            while not oracle.validate_padding(c1):
+                c1 = (c0 * mod_exp(s, e, n)) % n
+                s += 1
+        elif len(M) == 1:
+            a = M[0][0]
+            b = M[0][1]
+            if a == b:
+                return "\x00" + hex_to_text(hex_to_int(a))
+
+            r1 = (2 * (b * s - 2 * B)) / N
+            s = (2 * B + r1 * n) / b
+            c1 = (c0 * mod_exp(s, e, n)) % n
+            while not oracle.validate_padding(c1):
+                c1 = (c0 * mod_exp(s, e, n)) % n
+                s += 1
+                if s > (3 * B + r1 * n) / b:
+                    r1 += 1
+                    s = (2 * B + r1 * n) / b
+
+        M1 = []
+        for a, b in M:
+            min_r = (a * s - 3 * b + 1) / n
+            max_r = (b * s - 2 * b) / n
+            for r in range(min_r, max_r + 1):
+                new_a = max(a, (2 * B + r * n) / s)
+                new_b = max(b, (3 * B - 1 + r * n) / s)
+                if new_b > new_a:
+                    raise ValueError("New b > new a")
+
+        M = M1
+        i += 1
