@@ -340,12 +340,14 @@ def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphert
                 s += 1
                 c1 = (c0 * mod_exp(s, e, n)) % n
 
+        # 2.b.
         elif len(M) > 1:
             c1 = (c0 * mod_exp(s, e, n)) % n
             while not oracle.validate_padding(c1):
                 s += 1
                 c1 = (c0 * mod_exp(s, e, n)) % n
 
+        # 2.c.
         elif len(M) == 1:
             a = M[0][0]
             b = M[0][1]
@@ -366,6 +368,7 @@ def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphert
 
                 c1 = (c0 * mod_exp(s, e, n)) % n
 
+        # 3
         M1 = []
         for a, b in M:
             min_r = _my_ceil((a * s - 3 * B + 1), n)
@@ -374,7 +377,7 @@ def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphert
                 new_a = max(a, _my_ceil((2 * B + r * n), s))
                 new_b = min(b, (3 * B - 1 + r * n) // s)
                 if new_a > new_b:
-                    raise ValueError("New b > new a")
+                    raise ValueError("New a > new b")
 
                 M1 = _merge_m(M1, new_a, new_b)
 
