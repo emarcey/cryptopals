@@ -155,9 +155,8 @@ def test_padded_rsa_oracle(execution_number: int) -> None:
     assert not oracle.validate_padding(ciphertext2)
 
 
-@pytest.mark.parametrize("execution_number", range(1))
-def test_bleichenbacher_attack(execution_number: int) -> None:
-    key_len = 256
+@pytest.mark.parametrize("key_len", [(256), (768)])
+def test_bleichenbacher_attack(key_len: int) -> None:
     public_key, private_key = rsa(prime_length=key_len // 2)
     oracle = PaddedRsaOracle(private_key, key_len)
     message = "Hi mom"

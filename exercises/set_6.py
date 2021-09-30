@@ -277,7 +277,7 @@ def decrypt_even_odd_oracle(oracle: EvenOddRsaOracle, ciphertext: int, public_ke
     return hex_to_text(int_to_hex(upper_bound))
 
 
-### Challenge 47
+### Challenge 47 & 48
 class PaddedRsaOracle:
     def __init__(self, private_key: RsaKey, key_len: int) -> None:
         self.private_key = private_key
