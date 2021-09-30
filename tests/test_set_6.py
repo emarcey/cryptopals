@@ -7,6 +7,7 @@ from exercises.set_1 import int_to_hex, base64_to_plaintext
 from exercises.set_4 import sha1
 from exercises.set_5 import rsa, encrypt_rsa
 from exercises.set_6 import (
+    bleichenbacher_attack,
     brute_force_recover_dsa_private_key,
     decrypt_even_odd_oracle,
     DEFAULT_P,
@@ -146,9 +147,19 @@ def test_decrypt_even_odd_oracle() -> None:
 def test_padded_rsa_oracle(execution_number: int) -> None:
     key_len = 256
     public_key, private_key = rsa(prime_length=key_len // 2)
-    oracle = PaddedRsaOracle(private_key)
+    oracle = PaddedRsaOracle(private_key, key_len)
     message = "Hi mom"
     ciphertext = pad_and_encrypt(message, key_len, public_key)
     ciphertext2 = encrypt_rsa("message", public_key)
     assert oracle.validate_padding(ciphertext)
     assert not oracle.validate_padding(ciphertext2)
+
+
+@pytest.mark.parametrize("execution_number", range(1))
+def test_bleichenbacher_attack(execution_number: int) -> None:
+    key_len = 256
+    public_key, private_key = rsa(prime_length=key_len // 2)
+    oracle = PaddedRsaOracle(private_key, key_len)
+    message = "Hi mom"
+    ciphertext = pad_and_encrypt(message, key_len, public_key)
+    assert bleichenbacher_attack(oracle, key_len, ciphertext, public_key).endswith(message)

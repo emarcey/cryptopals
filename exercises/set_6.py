@@ -274,30 +274,50 @@ def decrypt_even_odd_oracle(oracle: EvenOddRsaOracle, ciphertext: int, public_ke
         else:
             lower_bound = (lower_bound + upper_bound) / 2
 
-        print(hex_to_text(int_to_hex(upper_bound)))
     return hex_to_text(int_to_hex(upper_bound))
 
 
 ### Challenge 47
 class PaddedRsaOracle:
-    def __init__(self, private_key: RsaKey) -> None:
+    def __init__(self, private_key: RsaKey, key_len: int) -> None:
         self.private_key = private_key
+        self.key_len = key_len
 
     def validate_padding(self, c: int) -> bool:
         decrypted = "\x00" + decrypt_rsa(c, self.private_key)
-        return decrypted[:2] == "\x00\x02"
+        return decrypted[:2] == "\x00\x02" and len(decrypted) == _my_ceil(self.key_len, 8)
+
+
+def pad_message(message: str, key_length_bits: int) -> int:
+    padding = "".join([chr(randbelow(255) + 1) for i in range(key_length_bits // 8 - len(message) - 3)])
+    padded_message = "\x00\x02" + padding + "\x00" + message
+    return padded_message
 
 
 def pad_and_encrypt(message: str, key_length_bits: int, public_key: RsaKey) -> int:
-    padding = "".join([chr(randbelow(255) + 1) for i in range(key_length_bits // 8 - len(message) - 3)])
-    padded_message = "\x00\x02" + padding + "\x00" + message
+    padded_message = pad_message(message, key_length_bits)
     return encrypt_rsa(padded_message, public_key)
 
 
+def _merge_m(m: List[List[int]], new_a: int, new_b: int) -> List[List[int]]:
+    for i in range(len(m)):
+        old_a = m[i][0]
+        old_b = m[i][1]
+        if new_a <= old_b and new_b >= old_a:
+            m[i][0] = min(new_a, old_a)
+            m[i][1] = max(new_b, old_b)
+            return
+
+    m.append([new_a, new_b])
+    return m
+
+
+def _my_ceil(a: int, b: int) -> int:
+    return (a + b - 1) // b
+
+
 def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphertext: int, public_key: RsaKey) -> str:
-    new_ciphertexts = []
-    ranges = []
-    k = key_len // 8
+    k = key_length_bits // 8
     B = 2 ** (8 * (k - 2))
     e = public_key.v
     n = public_key.n
@@ -314,41 +334,51 @@ def bleichenbacher_attack(oracle: PaddedRsaOracle, key_length_bits: int, ciphert
     while True:
         # 2.a.
         if i == 1:
-            s = n // (3 * B)
-            c1 = 0
+            s = _my_ceil(n, (3 * B))
+            c1 = (c0 * mod_exp(s, e, n)) % n
             while not oracle.validate_padding(c1):
-                c1 = (c0 * mod_exp(s, e, n)) % n
                 s += 1
+                c1 = (c0 * mod_exp(s, e, n)) % n
+
         elif len(M) > 1:
-            c1 = 0
+            c1 = (c0 * mod_exp(s, e, n)) % n
             while not oracle.validate_padding(c1):
-                c1 = (c0 * mod_exp(s, e, n)) % n
                 s += 1
+                c1 = (c0 * mod_exp(s, e, n)) % n
+
         elif len(M) == 1:
             a = M[0][0]
             b = M[0][1]
             if a == b:
-                return "\x00" + hex_to_text(hex_to_int(a))
+                hex_val = int_to_hex(a)
+                if len(hex_val) % 2 == 1:
+                    hex_val = "0" + hex_val
+                return "\x00" + hex_to_text(hex_val)
 
-            r1 = (2 * (b * s - 2 * B)) / N
-            s = (2 * B + r1 * n) / b
+            r = _my_ceil(2 * (b * s - 2 * B), n)
+            s = _my_ceil((2 * B + r * n), b)
             c1 = (c0 * mod_exp(s, e, n)) % n
             while not oracle.validate_padding(c1):
-                c1 = (c0 * mod_exp(s, e, n)) % n
                 s += 1
-                if s > (3 * B + r1 * n) / b:
-                    r1 += 1
-                    s = (2 * B + r1 * n) / b
+                if s > (3 * B + r * n) // a:
+                    r += 1
+                    s = _my_ceil((2 * B + r * n), b)
+
+                c1 = (c0 * mod_exp(s, e, n)) % n
 
         M1 = []
         for a, b in M:
-            min_r = (a * s - 3 * b + 1) / n
-            max_r = (b * s - 2 * b) / n
+            min_r = _my_ceil((a * s - 3 * B + 1), n)
+            max_r = (b * s - 2 * B) // n
             for r in range(min_r, max_r + 1):
-                new_a = max(a, (2 * B + r * n) / s)
-                new_b = max(b, (3 * B - 1 + r * n) / s)
-                if new_b > new_a:
+                new_a = max(a, _my_ceil((2 * B + r * n), s))
+                new_b = min(b, (3 * B - 1 + r * n) // s)
+                if new_a > new_b:
                     raise ValueError("New b > new a")
 
+                M1 = _merge_m(M1, new_a, new_b)
+
         M = M1
+        if len(M) == 0:
+            raise ValueError("No M")
         i += 1
