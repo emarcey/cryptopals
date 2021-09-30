@@ -3,15 +3,17 @@ import pytest
 from secrets import choice, randbelow, token_bytes
 
 from exercises.const import DEFAULT_ENCODING
-from exercises.set_1 import int_to_hex
+from exercises.set_1 import int_to_hex, base64_to_plaintext
 from exercises.set_4 import sha1
 from exercises.set_5 import rsa, encrypt_rsa
 from exercises.set_6 import (
     brute_force_recover_dsa_private_key,
+    decrypt_even_odd_oracle,
     dsa,
     DsaSignature,
     DsaSignatureOracle,
     DsaSignedMessage,
+    EvenOddRsaOracle,
     find_paired_messages,
     forge_dsa_signature,
     forge_rsa_signature,
@@ -126,3 +128,13 @@ def test_forge_dsa_signature(given: str) -> None:
     forged_signature = forge_dsa_signature(public_key, given)
     oracle = DsaSignatureOracle(private_key, public_key, g=DEFAULT_P + 1)
     assert oracle.validate(forged_signature, given)
+
+
+def test_decrypt_even_odd_oracle() -> None:
+    public_key, private_key = rsa(prime_length=512)
+    oracle = EvenOddRsaOracle(private_key)
+    message = base64_to_plaintext(
+        "VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IGFyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ=="
+    )
+    ciphertext = encrypt_rsa(message, public_key)
+    assert decrypt_even_odd_oracle(oracle, ciphertext, public_key) == message

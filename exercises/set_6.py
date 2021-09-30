@@ -1,4 +1,6 @@
+from decimal import Decimal, getcontext
 import hashlib
+from math import ceil, log
 import re
 import time
 from secrets import randbelow
@@ -7,7 +9,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from exercises.const import DEFAULT_ENCODING
 from exercises.set_1 import hex_to_text, int_to_hex, text_to_hex, hex_to_int
 from exercises.set_4 import sha1
-from exercises.set_5 import decrypt_rsa, encrypt_rsa, invmod, mod_exp, rsa, RsaKey, find_n_root
+from exercises.set_5 import decrypt_rsa, encrypt_rsa, invmod, mod_exp, rsa, RsaKey, find_n_root, decrypt_rsa_int
 
 ### Challenge 41
 class UnpaddedRsaOracle:
@@ -238,3 +240,39 @@ def forge_dsa_signature(public_key: int, m: str, p: int = DEFAULT_P, q: int = DE
     r = _forge_r(public_key, m_int, p, q)
     s = _forge_s(r, m_int, q)
     return DsaSignature(r, s)
+
+
+### Challenge 46
+class EvenOddRsaOracle:
+    def __init__(self, private_key: RsaKey) -> None:
+        self.private_key = private_key
+
+    def decrypt(self, c: int) -> str:
+        decrypted = decrypt_rsa(c, self.private_key)
+        return decrypted
+
+    def plaintext_is_even(self, c: int) -> str:
+        decrypted = decrypt_rsa_int(c, self.private_key.v, self.private_key.n)
+        return decrypted % 2 == 0
+
+
+def decrypt_even_odd_oracle(oracle: EvenOddRsaOracle, ciphertext: int, public_key: RsaKey) -> str:
+    lower_bound = Decimal(0)
+    upper_bound = Decimal(public_key.n)
+
+    factor = mod_exp(2, public_key.v, public_key.n)
+
+    k = int(ceil(log(public_key.n, 2)))
+
+    new_text = ciphertext
+    getcontext().prec = k
+
+    for _ in range(k):
+        new_text = (new_text * factor) % public_key.n
+        if oracle.plaintext_is_even(new_text):
+            upper_bound = (lower_bound + upper_bound) / 2
+        else:
+            lower_bound = (lower_bound + upper_bound) / 2
+
+        print(hex_to_text(int_to_hex(upper_bound)))
+    return hex_to_text(int_to_hex(upper_bound))

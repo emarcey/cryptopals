@@ -44,7 +44,7 @@ def hex_to_base64(hex_str: str) -> str:
 ### Challenge 2
 def _int_to_hex(i: int) -> str:
     q = i // 16
-    r = i % 16
+    r = int(i % 16)
     result = ""
     if q == 0:
         return HEX_CHARS[r]
