@@ -77,7 +77,7 @@ class CbcMacServer:
 
         if re_encrypted_message[-1 * 16 :] == mac:
             kvs = kv_parser(raw_message)
-            transactions = raw_message["tx_list"].split(":")
+            transactions = kvs["tx_list"].split(";")
             print(f"Processing payments from account {kvs['from']} to {transactions}")
             return True
         return False
@@ -99,10 +99,12 @@ def forge_message_with_iv(message: str, target_account: str) -> str:
     return new_message + new_iv + mac
 
 
-def forge_many_message(message: str, target_tx: Transaction) -> str:
+def forge_many_messages(client: CbcMacClient, message: str, target_tx: Transaction, target_account: str) -> str:
     original_message = message[:-16]
+    original_mac = message[-16:]
     padded_message = pkcs7_pad(original_message, 16)
-    forged_transaction = pkcs7_pad(";" + str(target_tx), 16)
-    new_message = padded_message + forged_transaction
-    mac = process_repeating_xor(process_repeating_xor(message[-16:], forged_transaction), padded_message[-16:])
-    return new_message + mac
+    new_signed = client.sign_many(target_tx._to, [Transaction(target_account, 0), target_tx])
+    new_mac = new_signed[-16:]
+    new_padded = pkcs7_pad(new_signed[16:-16], 16)
+    new_message = padded_message + process_repeating_xor(new_signed[:16], original_mac) + new_padded
+    return new_message + new_mac
