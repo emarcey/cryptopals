@@ -173,6 +173,8 @@ def xor_scorer(s: str) -> float:
 
         prev_char_byte = char_byte
 
+    if s.startswith("crypto{") and s.endswith("}"):
+        score += 10000000
     if num_caps == len(s):
         score += 20
 

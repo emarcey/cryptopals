@@ -338,6 +338,19 @@ class RsaKey:
         self.n = n
 
 
+def gcd(a: int, b: int) -> Tuple[int, int, int]:
+    r1 = a
+    r2 = b
+
+    while r2 != 0:
+        q = r1 // r2
+        r3 = r1
+        r1 = r2
+        r2 = r3 - q * r2
+
+    return r1
+
+
 def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
     r1 = a
     r2 = b
